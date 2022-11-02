@@ -1,0 +1,76 @@
+.no-arrows-input-number input {
+    text-align: center;
+}
+
+.rs-input-number-btn-group-vertical {
+    display: none;
+}
+
+.rs-picker-default .rs-btn,
+.rs-picker-default .rs-picker-toggle,
+.rs-picker-input .rs-btn,
+.rs-picker-input .rs-picker-toggle,
+.rs-input, .rs-picker-select-menu-item,
+.rs-table-cell, .rs-picker-search-bar,
+.rs-picker-menu
+{
+    background-color: #21273a!important;
+    /* border-color: #21273a!important; */
+}
+
+.rs-input-group-addon, .rs-picker-search-bar-input
+.rs-picker-menu .rs-picker-search-bar .rs-picker-search-bar-input
+{
+    background-color: #161a25 !important;
+}
+
+.rs-navbar-default .rs-navbar-item:hover
+{
+    background-color: transparent !important;
+}
+
+
+.rs-input:focus,
+.rs-input-group:not(.rs-input-group-disabled):hover,
+.rs-picker-default:not(.rs-picker-disabled) .rs-btn:hover,
+.rs-picker-default:not(.rs-picker-disabled) .rs-picker-toggle:hover,
+.rs-picker-menu .rs-picker-search-bar .rs-picker-search-bar-input:hover:not(:disabled)
+{
+    border-color: #6474a7!important;
+}
+
+.rs-navbar-default .rs-navbar-item.rs-navbar-item-active,
+.rs-input-group:focus-within,
+.rs-picker-default:not(.rs-picker-disabled) .rs-picker-toggle-active,
+.rs-picker-default:not(.rs-picker-disabled) .rs-btn:focus,
+.rs-picker-default:not(.rs-picker-disabled) .rs-picker-toggle:focus,
+.rs-picker-menu .rs-picker-search-bar .rs-picker-search-bar-input:focus
+{
+    border-color: #a3accb !important;
+    color: #a3accb !important;
+}
+
+
+.rs-navbar-default .rs-navbar-item.rs-navbar-item-active
+{
+    background-color: #161a25;
+}
+
+.rs-picker-toggle-active,
+.rs-picker.rs-picker-focused
+{
+    box-shadow: none;
+}
+
+.rs-picker-has-value .rs-btn .rs-picker-toggle-value,
+.rs-picker-has-value .rs-picker-toggle .rs-picker-toggle-value,
+.rs-picker-select-menu-item.rs-picker-select-menu-item-active
+{
+    color: #4982fc;
+}
+
+/*
+.selector-in-input
+{
+    background-color: transparent !important;
+} */

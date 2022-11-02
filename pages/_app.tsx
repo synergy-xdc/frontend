@@ -1,6 +1,16 @@
-import '../styles/globals.css'
-import type { AppProps } from 'next/app'
+import { AppProps } from 'next/app';
+import { CustomProvider } from 'rsuite';
+import '@/styles/theme.less';
+import '@/styles/globals.css';
+import "@/styles/Trading.css";
 
-export default function App({ Component, pageProps }: AppProps) {
-  return <Component {...pageProps} />
+
+function MyApp({ Component, pageProps }: AppProps) {
+  return (
+    <CustomProvider theme="dark">
+      <Component {...pageProps} />
+    </CustomProvider>
+  );
 }
+
+export default MyApp

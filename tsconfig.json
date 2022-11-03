@@ -24,6 +24,9 @@
       ],
       "@/networks/*": [
         "networks/*"
+      ],
+      "@/abi/*": [
+        "abi/*"
       ]
     }
   },

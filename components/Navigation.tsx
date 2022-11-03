@@ -4,13 +4,13 @@ import HomeIcon from '@rsuite/icons/legacy/Home';
 import DragableIcon from '@rsuite/icons/Dragable';
 import TrendIcon from '@rsuite/icons/Trend';
 import { Navbar, Nav, Button, Modal, ButtonGroup, SelectPicker } from 'rsuite';
-import React, { Component, FC, FunctionComponent, ReactElement, ReactNode } from 'react';
+import React, { Component, FC, ForwardedRef, FunctionComponent, ReactElement, ReactNode } from 'react';
 import HomeView from '@/components/views/Home';
 import TradingView from './views/Trading';
 import RusdView from './views/Rusd';
 import Link from 'next/link';
 import { Web3Modal, Web3Button, useAccount, ConnectButton, useConnectModal } from '@web3modal/react';
-import AVAILABLE_NETWORKS from '@/networks/all';
+import AVAILABLE_NETWORKS, { NetworkContext } from '@/networks/all';
 import Icon from "react-crypto-icons";
 
 
@@ -80,18 +80,20 @@ const ConnectedWallet: NextComponentType = () => {
 
     return (
         <>
-            <SelectPicker
-                size="lg"
-                label="Network"
-                data={Networks}
-                style={{ width: 300, minWidth: 250, }}
-                onChange={setNetwork}
-                cleanable={false}
-                defaultValue={network}
-                searchable={false}
-            />
-            &nbsp;
-            {showWallet()}
+            <NetworkContext.Provider value={AVAILABLE_NETWORKS[network]}>
+                <SelectPicker
+                    size="lg"
+                    label="Network"
+                    data={Networks}
+                    style={{ width: 300, minWidth: 250, }}
+                    onChange={setNetwork}
+                    cleanable={false}
+                    defaultValue={network}
+                    searchable={false}
+                />
+                &nbsp;
+                {showWallet()}
+            </NetworkContext.Provider>
         </>
     );
 }

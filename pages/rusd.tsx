@@ -5,7 +5,9 @@ import RusdView from '@/components/views/Rusd';
 export default function Rusd() {
     return (
         <Navigation active="rusd">
-            <RusdView />
+            <div style={{padding: 20}}>
+                <RusdView />
+            </div>
         </Navigation>
     );
 }

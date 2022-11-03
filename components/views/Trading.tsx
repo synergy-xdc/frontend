@@ -1,3 +1,4 @@
+import { NetworkContext } from "@/networks/all";
 import type { NextComponentType } from "next";
 import React from "react";
 
@@ -33,6 +34,7 @@ const ActivePositionsPlaceholder = [
 const TradeThePair: NextComponentType = () => {
 
     const [positionRusdValue, setPositionRusdValue] = React.useState<number>(10);
+    const networkProvider = React.useContext(NetworkContext);
 
     return (
         <Panel bordered shaded header="Trade the Synth">
@@ -50,7 +52,8 @@ const TradeThePair: NextComponentType = () => {
                         />
                         <InputGroup.Button onClick={() => setPositionRusdValue(positionRusdValue + 10)}>+</InputGroup.Button>
                     </InputGroup>
-                    <Form.HelpText>Balance: 2343.56</Form.HelpText>
+
+                    <Form.HelpText>Balance: {networkProvider.getRusdBalance()}</Form.HelpText>
                 </Form.Group>
                     <ButtonGroup style={{ marginTop: 12 }} justified>
                         <Button style={{borderColor: "#82363a", backgroundColor: "#f33645", color: "#FFF" }} appearance='primary' color="red"><b>Short</b></Button>
@@ -188,7 +191,7 @@ const TradingView: NextComponentType = () => {
                         <br/>
                         <FlexboxGrid.Item colspan={23}>
                             <AdvancedRealTimeChart
-                                height={698}
+                                height={780}
                                 width="auto"
                                 theme="dark"
                                 symbol={tradingSymbol}
@@ -219,6 +222,14 @@ const TradingView: NextComponentType = () => {
                         </InputGroup.Addon>
                         <Input readOnly value="2" />
                     </InputGroup>
+                    <br />
+                    <InputGroup>
+                        <InputGroup.Addon>
+                            C-ratio
+                        </InputGroup.Addon>
+                        <Input readOnly value="214%" />
+                    </InputGroup>
+                    <Form.HelpText style={{marginTop: 5}}>Min allowed: 150%</Form.HelpText>
                 </Panel>
                 </FlexboxGrid.Item>
 
@@ -226,28 +237,6 @@ const TradingView: NextComponentType = () => {
             <Panel style={{ marginLeft: 23 }} shaded bordered header="Your synth">
                 <ActiveOrdersTable />
                 <br />
-                <Panel bordered shaded header="Contract State">
-                    <InputGroup>
-                        <InputGroup.Addon>
-                            Fee
-                        </InputGroup.Addon>
-                        <Input readOnly value="0.03%" />
-                    </InputGroup>
-                        <br />
-                    <InputGroup>
-                        <InputGroup.Addon>
-                            C-ratio
-                        </InputGroup.Addon>
-                        <Input readOnly value="228%" />
-                    </InputGroup>
-                        <br />
-                    <InputGroup>
-                        <InputGroup.Addon>
-                            Min C-ratio
-                        </InputGroup.Addon>
-                        <Input readOnly value="150%" />
-                    </InputGroup>
-                </Panel>
             </Panel>
             <br />
         </>

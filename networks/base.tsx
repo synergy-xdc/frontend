@@ -18,7 +18,14 @@ abstract class BaseNetwork {
     abstract connectButton(): ReactNode
     abstract getRusdBalance(): number | undefined
     abstract getAvailableSynths(): Synth[]
-    abstract getRusdAddress(): string
+    abstract getRawBalance(): number | undefined
+    abstract getWethBalance(): number | undefined
+    abstract getRawPrice(): number | undefined
+    abstract getWethPrice(): number | undefined
+    abstract getWethAllowance(): number | undefined
+    abstract getCurrentCRatio(): number | undefined
+    abstract getMinCRatio(): number | undefined
+    abstract getNewWethAllowanceCallback(human_amount: number): Function
 }
 
 

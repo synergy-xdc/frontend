@@ -3,7 +3,7 @@ import CodeIcon from '@rsuite/icons/Code';
 import HomeIcon from '@rsuite/icons/legacy/Home';
 import DragableIcon from '@rsuite/icons/Dragable';
 import TrendIcon from '@rsuite/icons/Trend';
-import { Navbar, Nav, Button, Modal, ButtonGroup, SelectPicker } from 'rsuite';
+import { useToaster,  Navbar, Nav, Button, Modal, ButtonGroup, SelectPicker } from 'rsuite';
 import React, { Component, FC, ForwardedRef, FunctionComponent, ReactElement, ReactNode } from 'react';
 import HomeView from '@/components/views/Home';
 import TradingView from './views/Trading';
@@ -112,7 +112,6 @@ const Navigation: FC<{
     active: string,
     children: ReactNode
 }> = ({ children, active, ...props }) => {
-
     return (
         <>
             <Navbar style={{ backgroundColor: "#21273a" }}>

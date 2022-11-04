@@ -2,7 +2,11 @@ import { NetworkContext } from "@/networks/all";
 import type { NextComponentType } from "next";
 import React, { useContext, useEffect } from "react";
 
-import { InputGroup, Panel, Input, Form, FlexboxGrid, InputNumber, Button, ButtonGroup } from 'rsuite';
+import { InputGroup, Panel, Input, Form, FlexboxGrid, InputNumber, Button, ButtonGroup, useToaster } from 'rsuite';
+
+import { getStateHandlingCallback, WalletAskConfirmTX, WalletTXSuccessfullyBroadcasted } from "@/components/WalletNotification";
+import { Amount, TXState } from "@/networks/base";
+import { BigNumber } from "ethers";
 
 
 const UserRetableView_: NextComponentType = ({purpose, unit, value, ...props}) => {
@@ -20,23 +24,28 @@ const UserRetableView_: NextComponentType = ({purpose, unit, value, ...props}) =
 const UserRelatebleView: NextComponentType = () => {
 
     const networkProvider = useContext(NetworkContext);
+    const rawPrice = networkProvider.getRawPrice();
+    const rawBalance = networkProvider.getRawBalance();
+    const rawInUsd = rawBalance ? rawPrice?.mulAmount(rawBalance) : undefined;
+    const rusdBalance = networkProvider.getRusdBalance();
+    const currentCRation = networkProvider.getCurrentCRatio();
 
     return (
         <Panel bordered shaded header="Address relatable">
             <InputGroup>
                 <InputGroup.Addon>Balance (RAW)</InputGroup.Addon>
-                <Input readOnly value={networkProvider.getRawBalance()?.toFixed(5)} />
+                <Input readOnly value={rawBalance?.toHumanString(5)} />
             </InputGroup>
-            <Form.HelpText style={{marginTop: 5}}>&nbsp;~ {networkProvider.getRawPrice() * networkProvider.getRawBalance()}$ (price: {networkProvider.getRawPrice()}$)</Form.HelpText>
+            <Form.HelpText style={{marginTop: 5}}>&nbsp;~ {rawInUsd?.toHumanString(2)}$ (price: {rawPrice?.toHumanString(5)}$)</Form.HelpText>
             <br/>
             <InputGroup>
                 <InputGroup.Addon>Balance (rUSD)</InputGroup.Addon>
-                <Input readOnly value={networkProvider.getRusdBalance()?.toFixed(2)} />
+                <Input readOnly value={rusdBalance?.toHumanString(2)} />
             </InputGroup>
             <br/>
             <InputGroup>
                 <InputGroup.Addon>C-Ratio</InputGroup.Addon>
-                <Input readOnly value="355%" />
+                <Input readOnly value={currentCRation} />
             </InputGroup>
             <Form.HelpText style={{marginTop: 5}}>&nbsp;Min allowed: 150%</Form.HelpText>
             <br/>
@@ -95,11 +104,24 @@ const Staking: NextComponentType = () => {
 
 const Mint: NextComponentType = () => {
     const networkProvider = React.useContext(NetworkContext);
-    const [wethValue, setWethValue] = React.useState<number>(0.1);
-    const [rusdValue, setRusdValue] = React.useState<number>(100);
-    const setNewWethAllowanceCallback = networkProvider.getNewWethAllowanceCallback(wethValue);
+    const toaster = useToaster();
 
+    const wethAllowance = networkProvider.getWethAllowance();
+    const rusdBalance = networkProvider.getRusdBalance();
+    const wethBalance = networkProvider.getWethBalance();
 
+    const [wethValue, setWethValue] = React.useState<Amount>(wethBalance ? wethBalance : new Amount(BigNumber.from(0), 18));
+    const [rusdValue, setRusdValue] = React.useState<Amount>(rusdBalance ? rusdBalance : new Amount(BigNumber.from(0), 18));
+
+    const setNewWethAllowanceCallback = networkProvider.getNewWethAllowanceCallback(
+        wethValue,
+        getStateHandlingCallback(toaster)
+    );
+    const mintCallback = networkProvider.getMintCallback(
+        rusdValue,
+        wethValue,
+        getStateHandlingCallback(toaster)
+    );
 
     return (
         <Panel bordered shaded header="Mint rUSD">
@@ -110,55 +132,71 @@ const Mint: NextComponentType = () => {
             <Form.Group controlId="_">
                 <Form.ControlLabel>rUSD amount</Form.ControlLabel>
                 <InputGroup style={{marginTop: 5, marginBottom: 5}}>
-                    <InputGroup.Button onClick={() => setRusdValue(rusdValue + 10)} >-</InputGroup.Button>
+                    <InputGroup.Button onClick={() => setRusdValue(
+                        new Amount(rusdValue.amount.sub(BigNumber.from(10).pow(rusdValue.decimals)), rusdValue.decimals)
+                    )} >-</InputGroup.Button>
                     <InputNumber
                         className='no-arrows-input-number'
-                        value={rusdValue}
-
+                        step={0.1}
+                        value={rusdValue.toHumanString(2)}
                         onChange={
-                            (val) => setRusdValue(parseInt(val)) // @ts-ignore
+                            (val) => setRusdValue(
+                                Amount.fromString(typeof val == "string" ? val : val.toString(), rusdValue.decimals)
+                            )
                         }
                     />
-                    <InputGroup.Button onClick={() => setRusdValue(rusdValue + 10)}>+</InputGroup.Button>
+                    <InputGroup.Button onClick={() => setRusdValue(
+                        new Amount(rusdValue.amount.add(BigNumber.from(10).pow(rusdValue.decimals)), rusdValue.decimals)
+                    )}>+</InputGroup.Button>
                 </InputGroup>
-                <Form.HelpText>Balance: {networkProvider.getRawBalance()}</Form.HelpText>
+                <Form.HelpText>Balance: {rusdBalance?.toHumanString(5)}</Form.HelpText>
             </Form.Group>
             <br/>
             <Form.Group controlId="_">
                 <Form.ControlLabel>WETH amount</Form.ControlLabel>
                 <InputGroup style={{marginTop: 5, marginBottom: 5}}>
-                    <InputGroup.Button onClick={() => setWethValue(wethValue + .1)} >-</InputGroup.Button>
+                    <InputGroup.Button onClick={() => setWethValue(
+                        new Amount(wethValue.amount.sub(BigNumber.from(10).pow(wethValue.decimals - 1)), wethValue.decimals)
+                    )} >-</InputGroup.Button>
                     <InputNumber
                         className='no-arrows-input-number'
-                        value={wethValue}
-                        step={0.000001}
+                        step={0.1}
+                        value={wethValue.toHumanString(2)}
                         onChange={
-                            (val) => setWethValue(parseFloat(val)) // @ts-ignore
+                            (val) => setWethValue(
+                                Amount.fromString(typeof val == "string" ? val : val.toString(), wethValue.decimals)
+                            )
                         }
                     />
-                    <InputGroup.Button onClick={() => setWethValue(wethValue + .1)}>+</InputGroup.Button>
+                    <InputGroup.Button onClick={() => setWethValue(
+                         new Amount(wethValue.amount.add(BigNumber.from(10).pow(wethValue.decimals - 1)), wethValue.decimals)
+                    )}>+</InputGroup.Button>
                 </InputGroup>
-                <Form.HelpText>Balance: {networkProvider.getWethBalance()}</Form.HelpText>
-                <Form.HelpText>Allowance: {networkProvider.getWethAllowance()}</Form.HelpText>
+                <Form.HelpText>Balance: {wethBalance?.toHumanString(6)}</Form.HelpText>
+                <Form.HelpText>Allowance: {wethAllowance?.toHumanString(2)}</Form.HelpText>
                 <hr />
                 <Form.HelpText>Current C-ratio: {networkProvider.getCurrentCRatio()}%</Form.HelpText>
-                <Form.HelpText>New C-ratio: 676%</Form.HelpText>
+                <Form.HelpText>New C-ratio: {networkProvider.predictCollateralRatio(rusdValue, wethValue, true)}%</Form.HelpText>
                 <Form.HelpText>Min C-ratio: {networkProvider.getMinCRatio()}%</Form.HelpText>
             </Form.Group>
             <br />
             <ButtonGroup justified>
                 <Button
                     appearance="ghost"
-                    disabled={networkProvider.getWethAllowance() > wethValue}
+                    disabled={parseFloat(wethAllowance?.toHumanString(18)) >= parseFloat(wethValue?.toHumanString(18))}
                     style={{marginBottom: 7, borderWidth: 2}}
-                    onClick={async () => {
-                        console.log(123);
-                        setNewWethAllowanceCallback()
-                    }}
+                    onClick={async () => setNewWethAllowanceCallback()}
                 >
                     <b>Approve</b>
                 </Button>
-                <Button appearance="ghost" disabled={networkProvider.getWethAllowance() < wethValue} style={{marginBottom: 7, borderWidth: 2}}><b>Mint</b></Button>
+                <Button
+                    appearance="ghost"
+                    disabled={parseFloat(wethAllowance?.toHumanString(18)) < parseFloat(wethValue?.toHumanString(18))}
+                    style={{marginBottom: 7, borderWidth: 2}}
+                    onClick={async () => mintCallback()}
+                >
+                    <b>Mint</b>
+                </Button>
             </ButtonGroup>
 
         </Panel>

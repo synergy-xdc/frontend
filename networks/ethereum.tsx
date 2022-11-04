@@ -1,6 +1,6 @@
-import BaseNetwork, { Synth, WalletPrimaryData } from "@/networks/base";
-import { ConnectButton, useAccount, useBalance, useContractRead, Web3Modal, useToken, useContractWrite, useWaitForTransaction } from "@web3modal/react";
-import { ReactNode } from "react";
+import BaseNetwork, { Amount, Synth, TXState, WalletPrimaryData } from "@/networks/base";
+import { ConnectButton, useAccount, useBalance, useContractRead, Web3Modal, useToken, useContractWrite, useWaitForTransaction, useContractEvent } from "@web3modal/react";
+import { ReactNode, useEffect } from "react";
 import RawABI from "@/abi/RAW.json";
 import RusdABI from "@/abi/RUSD.json";
 import SynergyABI from "@/abi/Synergy.json";
@@ -11,7 +11,7 @@ import { BigNumber, ethers, utils } from "ethers";
 import React from "react";
 
 
-const SynergyAddress: string = "0xf8af6846d2F512F3E14Ea3D56ad8De00d377B3c3";
+const SynergyAddress: string = "0x2f6F4493bb82f00Ed346De9353EF22cA277b7680";
 
 const walletConnectConfig = {
     projectId: "12647116f49027a9b16f4c0598eb6d74",
@@ -39,9 +39,13 @@ const AvailableSynth: Synth[] = [
     }
 ]
 
-const RusdAddress: string = "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2";
 
 class EthereumNetwork extends BaseNetwork {
+
+    wethApproveState: TXState = TXState.Done;
+    mintState: TXState = TXState.Done;
+
+    showedTxs: string[] = []
 
     connectButton(): ReactNode {
         return (
@@ -75,7 +79,7 @@ class EthereumNetwork extends BaseNetwork {
         return wallet
     }
 
-    getRusdBalance(): number | undefined {
+    getRusdBalance(): Amount | undefined {
 
         const { account, isReady } = useAccount();
         const synergyCallResult = useContractRead({
@@ -94,14 +98,22 @@ class EthereumNetwork extends BaseNetwork {
             args: [account.address],
             chainId: chains.goerli.id
         })
+        useContractEvent({
+            address: synergyCallResult.data ? synergyCallResult.data : "0x0",
+            abi: WethABI,
+            eventName: 'Transfer',
+            listener: (...event) => {
+                rusdBalanceOfCall.refetch().then((val) => val)
+            }
+        })
         if (rusdBalanceOfCall.data !== undefined && rusdContract.data?.decimals !== undefined) {
             const balance: BigNumber = rusdBalanceOfCall.data as BigNumber;
-            return balance.div(BigNumber.from(10).pow(rusdContract.data.decimals)).toNumber()
+            return new Amount(balance, rusdContract.data.decimals)
         }
         return undefined
     }
 
-    getRawBalance(): number | undefined {
+    getRawBalance(): Amount | undefined {
         const { account, isReady } = useAccount();
         const synergyCallResult = useContractRead({
             address: SynergyAddress,
@@ -121,12 +133,12 @@ class EthereumNetwork extends BaseNetwork {
         })
         if (rawBalanceOfCall.data !== undefined && rawContract.data?.decimals !== undefined) {
             const balance: BigNumber = rawBalanceOfCall.data as BigNumber;
-            return balance.div(BigNumber.from(10).pow(rawContract.data.decimals)).toNumber()
+            return new Amount(balance, rawContract.data.decimals)
         }
         return undefined
     }
 
-    getRawPrice(): number | undefined {
+    getRawPrice(): Amount | undefined {
         const { account, isReady } = useAccount();
         const oracleContractAddressCall = useContractRead({
             address: SynergyAddress,
@@ -149,8 +161,8 @@ class EthereumNetwork extends BaseNetwork {
         })
         if (rawPriceCall.data !== undefined) {
             const rawPrice = rawPriceCall.data[0] as BigNumber;
-            const rawPriceDecimals = rawPriceCall.data[1] as BigNumber;
-            return rawPrice.div(BigNumber.from(10).pow(rawPriceDecimals)).toNumber();
+            const rawPriceDecimals = rawPriceCall.data[1];
+            return new Amount(rawPrice, rawPriceDecimals);
         } else {
             return undefined;
         }
@@ -186,7 +198,7 @@ class EthereumNetwork extends BaseNetwork {
         }
     }
 
-    getWethBalance(): number | undefined {
+    getWethBalance(): Amount | undefined {
         const { account, isReady } = useAccount();
         const synergyCallResult = useContractRead({
             address: SynergyAddress,
@@ -206,12 +218,12 @@ class EthereumNetwork extends BaseNetwork {
         })
         if (wethBalanceOfCall.data !== undefined && wethContract.data?.decimals !== undefined) {
             const balance: BigNumber = wethBalanceOfCall.data as BigNumber;
-            return balance.div(BigNumber.from(10).pow(wethContract.data.decimals)).toNumber()
+            return new Amount(balance, wethContract.data.decimals);
         }
         return undefined
     }
 
-    getWethAllowance(): number | undefined {
+    getWethAllowance(): Amount | undefined {
         const { account, isReady } = useAccount();
         const synergyCallResult = useContractRead({
             address: SynergyAddress,
@@ -229,9 +241,32 @@ class EthereumNetwork extends BaseNetwork {
             args: [account.address, SynergyAddress],
             chainId: chains.goerli.id
         })
+        useContractEvent({
+            address: synergyCallResult.data ? synergyCallResult.data : "0x0",
+            abi: WethABI,
+            eventName: 'Approval',
+            listener: (...event) => {
+                wethAllowanceCall.refetch().then((val) => val)
+            }
+        })
+        useContractEvent({
+            address: synergyCallResult.data ? synergyCallResult.data : "0x0",
+            abi: WethABI,
+            eventName: 'Transfer',
+            listener: (...event) => {
+                wethAllowanceCall.refetch().then((val) => val)
+            }
+        })
+        // useEffect(() => {
+        //     async function update() {
+        //         console.log(1)
+        //         await wethAllowanceCall.refetch()
+        //     }
+        //     update();
+        // }, [])
         if (wethAllowanceCall.data !== undefined && wethContract.data?.decimals !== undefined) {
             const balance: BigNumber = wethAllowanceCall.data as BigNumber;
-            return balance.div(BigNumber.from(10).pow(wethContract.data.decimals)).toString()
+            return new Amount(balance, wethContract.data.decimals)
         }
         return undefined
     }
@@ -250,11 +285,35 @@ class EthereumNetwork extends BaseNetwork {
             args: [account.address],
             chainId: chains.goerli.id
         });
+        const wethCall = useContractRead({
+            address: SynergyAddress,
+            abi: SynergyABI,
+            functionName: "wEth",
+            chainId: chains.goerli.id
+        });
+        useContractEvent({
+            address: wethCall.data ? wethCall.data : "0x0",
+            abi: WethABI,
+            eventName: 'Approval',
+            listener: (...event) => {
+                synergyCollateralRatioCall.refetch().then((val) => val)
+            }
+        })
+        useContractEvent({
+            address: wethCall.data ? wethCall.data : "0x0",
+            abi: WethABI,
+            eventName: 'Transfer',
+            listener: (...event) => {
+                synergyCollateralRatioCall.refetch().then((val) => val)
+            }
+        })
         if (synergyCollateralRatioCall.data !== undefined) {
-            return synergyCollateralRatioCall.data / (10 ** 8)
+            return synergyCollateralRatioCall.data / (10 ** 6)
         }
+
         return undefined
     }
+
     getMinCRatio(): number | undefined {
         const synergyMinCollateralRatioCall = useContractRead({
             address: SynergyAddress,
@@ -269,7 +328,10 @@ class EthereumNetwork extends BaseNetwork {
         return undefined
     }
 
-    getNewWethAllowanceCallback(human_amount: number): Function {
+    getNewWethAllowanceCallback(
+        amount: Amount,
+        tx_state_changes_callback: (state: TXState) => void,
+    ): Function {
         const { account } = useAccount();
         const synergyWethCall = useContractRead({
             address: SynergyAddress,
@@ -284,14 +346,132 @@ class EthereumNetwork extends BaseNetwork {
             address: synergyWethCall.data,
             abi: WethABI,
             functionName: 'approve',
-            args: [SynergyAddress, wethContract.data === undefined ? 0 : (human_amount * (10 ** wethContract.data?.decimals)).toString()],
+            args: [SynergyAddress, amount.amount],
             chainId: chains.goerli.id,
+        })
+        useContractEvent({
+            address: synergyWethCall.data ? synergyWethCall.data : "0x0",
+            abi: WethABI,
+            eventName: 'Approval',
+            listener: (...event) => {
+                console.log(event, this.wethApproveState);
+                if (event[3].transactionHash == setWethAllowanceSign.data?.hash && this.wethApproveState == TXState.Broadcasting) {
+                    // this.showedTxs.push(setWethAllowanceSign.data?.hash);
+                    this.wethApproveState = TXState.Done;
+                    tx_state_changes_callback(TXState.Success);
+                }
 
+            }
         })
         const signWait = useWaitForTransaction({ hash: setWethAllowanceSign.data?.hash });
+        const wethApproveNewState = this._defineStateChangesCallback(signWait.isWaiting, setWethAllowanceSign.isLoading, this.wethApproveState);
 
+        if (this.wethApproveState !== wethApproveNewState) {
+            console.log(signWait.isWaiting, setWethAllowanceSign.isLoading, this.wethApproveState, wethApproveNewState);
+            this.wethApproveState = wethApproveNewState;
+            tx_state_changes_callback(wethApproveNewState);
+        }
         return setWethAllowanceSign.write
 
+    }
+
+    predictCollateralRatio(amountToMint: Amount, amountToPledge: Amount, increase: boolean): number | undefined {
+        const { account, isReady } = useAccount();
+        const predictCollateralRatioCall = useContractRead({
+            address: SynergyAddress,
+            abi: SynergyABI,
+            functionName: "predictCollateralRatio",
+            args: [account.address, amountToMint.amount, amountToPledge.amount, increase],
+            chainId: chains.goerli.id
+        });
+        const wethCall = useContractRead({
+            address: SynergyAddress,
+            abi: SynergyABI,
+            functionName: "wEth",
+            chainId: chains.goerli.id
+        });
+        useContractEvent({
+            address: wethCall.data ? wethCall.data : "0x0",
+            abi: WethABI,
+            eventName: 'Approval',
+            listener: (...event) => {
+                predictCollateralRatioCall.refetch().then((val) => val)
+            }
+        })
+        useContractEvent({
+            address: wethCall.data ? wethCall.data : "0x0",
+            abi: WethABI,
+            eventName: 'Transfer',
+            listener: (...event) => {
+                predictCollateralRatioCall.refetch().then((val) => val)
+            }
+        })
+        if (predictCollateralRatioCall.data !== undefined) {
+            const cratio = predictCollateralRatioCall.data as BigNumber;
+            const cratioAmount = new Amount(cratio, 6)
+            return parseFloat(cratioAmount.toHumanString(2))
+        } else {
+            return undefined;
+        }
+    }
+
+    getMintCallback(
+        amountToMint: Amount,
+        amountToPledge: Amount,
+        tx_state_changes_callback: (state: TXState) => void,
+    ): Function {
+        const { account } = useAccount();
+        const mintSign = useContractWrite({
+            address: SynergyAddress,
+            abi: SynergyABI,
+            functionName: 'mint',
+            args: [amountToMint.amount, amountToPledge.amount],
+            chainId: chains.goerli.id,
+        })
+        useContractEvent({
+            address: SynergyAddress,
+            abi: SynergyABI,
+            eventName: 'Minted',
+            listener: (...event) => {
+                console.log(event);
+                if (event[2].transactionHash == mintSign.data?.hash && this.mintState == TXState.Broadcasting) {
+                    this.mintState = TXState.Done;
+                    tx_state_changes_callback(TXState.Success);
+                }
+            }
+        })
+        const signWait = useWaitForTransaction({ hash: mintSign.data?.hash });
+        const newMintState = this._defineStateChangesCallback(signWait.isWaiting, mintSign.isLoading, this.mintState);
+
+        if (this.mintState !== newMintState) {
+            console.log(signWait.isWaiting, mintSign.isLoading, this.mintState, newMintState);
+            this.mintState = newMintState;
+            tx_state_changes_callback(newMintState);
+        }
+        return mintSign.write
+
+    }
+
+
+    _defineStateChangesCallback(
+        isWaiting: boolean,
+        isLoading: boolean,
+        currentState: TXState
+    ): TXState {
+        switch ([isWaiting, isLoading, currentState].toString()) {
+            case [false, true, TXState.Done].toString():
+                return TXState.AwaitWalletConfirmation
+            case [false, true, TXState.AwaitWalletConfirmation].toString():
+                return TXState.AwaitWalletConfirmation
+            case [false, false, TXState.AwaitWalletConfirmation].toString():
+                return TXState.Broadcasting
+            case [true, false, TXState.Success].toString():
+                return TXState.Done
+            case [false, false, TXState.Done].toString():
+                return TXState.Done
+            default:
+                return currentState
+        }
     }
 }
 

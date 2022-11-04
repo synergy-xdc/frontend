@@ -36,6 +36,8 @@ const TradeThePair: NextComponentType = () => {
     const [positionRusdValue, setPositionRusdValue] = React.useState<number>(10);
     const networkProvider = React.useContext(NetworkContext);
 
+    const rusdBalance = networkProvider.getRusdBalance();
+
     return (
         <Panel bordered shaded header="Trade the Synth">
             <div style={{textAlign: "left"}}>
@@ -53,7 +55,7 @@ const TradeThePair: NextComponentType = () => {
                         <InputGroup.Button onClick={() => setPositionRusdValue(positionRusdValue + 10)}>+</InputGroup.Button>
                     </InputGroup>
 
-                    <Form.HelpText>Balance: {networkProvider.getRusdBalance()}</Form.HelpText>
+                    <Form.HelpText>Balance: {rusdBalance?.toHumanString(4)}</Form.HelpText>
                 </Form.Group>
                     <ButtonGroup style={{ marginTop: 12 }} justified>
                         <Button style={{borderColor: "#82363a", backgroundColor: "#f33645", color: "#FFF" }} appearance='primary' color="red"><b>Short</b></Button>

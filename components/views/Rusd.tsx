@@ -204,13 +204,43 @@ const Mint: NextComponentType = () => {
 }
 
 const Burn: NextComponentType = () => {
-    const [rusdValue, setRusdValue] = React.useState<number>(100);
+    const networkProvider = React.useContext(NetworkContext);
+    const toaster = useToaster();
+
+    const rusdBalance = networkProvider.getRusdBalance();
+    const [rusdValue, setRusdValue] = React.useState<Amount>(rusdBalance ? rusdBalance : new Amount(BigNumber.from(0), 18));
 
     return (
         <Panel bordered shaded header="Burn rUSD">
             <p>
                 In molestie sem est, vitae blandit justo vestibulum in. Quisque lacinia quam et erat pellentesque iaculis. Cras fermentum sagittis nisl, vel dignissim arcu accumsan ut. Ut ipsum nulla, convallis at arcu ut, aliquam lobortis mauris. Nunc tristique lacinia tortor, ac volutpat tortor. Proin ullamcorper posuere blandit. Nam ut lobortis massa. Aliquam a vestibulum mi, in tincidunt ex. Phasellus viverra, tellus ac ullamcorper eleifend, est enim condimentum felis, sit amet bibendum purus nisl eget sapien.
             </p>
+            <hr />
+            <Form.Group controlId="_">
+                <Form.ControlLabel>Burn rUSD amount</Form.ControlLabel>
+                <InputGroup style={{marginTop: 5, marginBottom: 5}}>
+                    <InputGroup.Button onClick={() => setRusdValue(
+                        new Amount(rusdValue.amount.sub(BigNumber.from(10).pow(rusdValue.decimals)), rusdValue.decimals)
+                    )} >-</InputGroup.Button>
+                    <InputNumber
+                        className='no-arrows-input-number'
+                        step={0.1}
+                        value={rusdValue.toHumanString(2)}
+                        onChange={
+                            (val) => setRusdValue(
+                                Amount.fromString(typeof val == "string" ? val : val.toString(), rusdValue.decimals)
+                            )
+                        }
+                    />
+                    <InputGroup.Button onClick={() => setRusdValue(
+                        new Amount(rusdValue.amount.add(BigNumber.from(10).pow(rusdValue.decimals)), rusdValue.decimals)
+                    )}>+</InputGroup.Button>
+                </InputGroup>
+                <Form.HelpText>Balance: TODO</Form.HelpText>
+                <Form.HelpText>New balance: TODO</Form.HelpText>
+            </Form.Group>
+            <br />
+            <Button color="orange" appearance="ghost" block style={{marginBottom: 7, borderWidth: 2}}><b>Burn rUSD</b></Button>
             <hr />
             <Form.Group controlId="_">
                 <Form.ControlLabel>rUSD amount</Form.ControlLabel>
@@ -225,10 +255,18 @@ const Burn: NextComponentType = () => {
                     />
                     <InputGroup.Button onClick={() => setRusdValue(rusdValue + 10)}>+</InputGroup.Button>
                 </InputGroup>
-                <Form.HelpText>Recieve RAW amount: 1232.33</Form.HelpText>
+                <Form.HelpText>Current balance: TODO</Form.HelpText>
+                <Form.HelpText>New balance: TODO</Form.HelpText>
             </Form.Group>
             <br />
-            <Button color="yellow" appearance="ghost" block style={{marginBottom: 7, borderWidth: 2}}><b>Burn</b></Button>
+            <Button
+                color="violet"
+                appearance="ghost"
+                block
+                style={{marginBottom: 7, borderWidth: 2, borderColor: "#b6a1e3", color: "#b6a1e3"}}
+            >
+                <b>Withdraw wETH</b>
+            </Button>
         </Panel>
     );
 }

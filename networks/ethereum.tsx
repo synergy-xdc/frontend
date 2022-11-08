@@ -452,6 +452,38 @@ class EthereumNetwork extends BaseNetwork {
 
     }
 
+    getBurnRusdCallback(amount: Amount): Function {
+        const { account } = useAccount();
+        const mintSign = useContractWrite({
+            address: SynergyAddress,
+            abi: SynergyABI,
+            functionName: 'mint',
+            args: [amountToMint.amount, amountToPledge.amount],
+            chainId: chains.goerli.id,
+        })
+        useContractEvent({
+            address: SynergyAddress,
+            abi: SynergyABI,
+            eventName: 'Minted',
+            listener: (...event) => {
+                console.log(event);
+                if (event[2].transactionHash == mintSign.data?.hash && this.mintState == TXState.Broadcasting) {
+                    this.mintState = TXState.Done;
+                    tx_state_changes_callback(TXState.Success);
+                }
+            }
+        })
+        const signWait = useWaitForTransaction({ hash: mintSign.data?.hash });
+        const newMintState = this._defineStateChangesCallback(signWait.isWaiting, mintSign.isLoading, this.mintState);
+
+        if (this.mintState !== newMintState) {
+            console.log(signWait.isWaiting, mintSign.isLoading, this.mintState, newMintState);
+            this.mintState = newMintState;
+            tx_state_changes_callback(newMintState);
+        }
+        return mintSign.write
+    }
+
 
     _defineStateChangesCallback(
         isWaiting: boolean,

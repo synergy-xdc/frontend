@@ -104,6 +104,7 @@ abstract class BaseNetwork {
         amountToPledge: Amount,
         tx_state_changes_callback: (state: TXState) => void,
     ): Function
+    abstract getBurnRusdCallback(amount: Amount): Function
 }
 
 

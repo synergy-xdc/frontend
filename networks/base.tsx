@@ -7,6 +7,7 @@ export interface WalletPrimaryData {
     network_currency_amount?: string
 }
 
+
 export interface Synth {
     address: string
     full_name: string,
@@ -86,7 +87,7 @@ export class Amount {
 }
 
 abstract class BaseNetwork {
-    abstract showWallet(): WalletPrimaryData | null
+    abstract showWallet(): WalletPrimaryData | null | any
     abstract connectButton(): ReactNode
     abstract getRusdBalance(): Amount | undefined
     abstract getAvailableSynths(): Synth[]

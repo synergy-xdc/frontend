@@ -60,7 +60,11 @@ const ConnectedWallet: NextComponentType = () => {
     const [network, setNetwork] = React.useState<string>("ethereum");
 
     const showWallet = () => {
+
+
         const wallet = AVAILABLE_NETWORKS[network].showWallet();
+
+        // const wallet: any = null
         if (wallet !== null) {
             return (
                 <Button
@@ -73,6 +77,7 @@ const ConnectedWallet: NextComponentType = () => {
                     &nbsp;({wallet.address.slice(0, 5)}..{wallet.address.slice(wallet.address.length - 5, wallet.address.length)})
                 </Button>
             );
+
         } else {
             return AVAILABLE_NETWORKS[network].connectButton();
         }
@@ -105,6 +110,10 @@ const Networks = [
     {
         label: "Waves Enterprise",
         value: "waves-enterprise"
+    },
+        {
+        label: "TRON",
+        value: "tron"
     }
 ]
 

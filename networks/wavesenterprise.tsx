@@ -3,6 +3,7 @@ import { ReactNode } from "react";
 import { Button } from "rsuite";
 
 class WavesEnterpriseNetwork extends BaseNetwork {
+    
     getRusdBalance(): number {
         throw new Error("Method not implemented.");
     }

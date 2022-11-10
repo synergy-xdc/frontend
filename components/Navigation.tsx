@@ -19,6 +19,8 @@ import React, {
   FunctionComponent,
   ReactElement,
   ReactNode,
+  useEffect,
+  useState,
 } from "react";
 import HomeView from "@/components/views/Home";
 import TradingView from "./views/Trading";
@@ -33,6 +35,7 @@ import {
 } from "@web3modal/react";
 import AVAILABLE_NETWORKS, { NetworkContext } from "@/networks/all";
 import Icon from "react-crypto-icons";
+import { WalletPrimaryData } from "@/networks/base";
 
 const homeLabel = "home";
 const tradingLabel = "trading";
@@ -65,35 +68,30 @@ const ConnectedWallet: NextComponentType = () => {
   const [network, setNetwork] = React.useState<string>("ethereum");
 
   const showWallet = () => {
-    // const wallet = AVAILABLE_NETWORKS[network].showWallet();
+    const wallet = AVAILABLE_NETWORKS[network].showWallet();
 
-    const wallet = {
-      address: "account.address",
-      network_currency_symbol: "ETH",
-      network_currency_amount: "data.",
-    };
-
-    // const wallet: any = null
-    if (wallet !== null) {
-      return (
-        <Button
-          color="green"
-          appearance="ghost"
-          style={{ borderColor: "#6474a7", color: "rgba(255, 255, 255, 0.9" }}
-        >
-          {wallet.network_currency_symbol}
-          &nbsp;{wallet.network_currency_amount}
-          &nbsp;({wallet.address.slice(0, 5)}..
-          {wallet.address.slice(
-            wallet.address.length - 5,
-            wallet.address.length
-          )}
-          )
-        </Button>
-      );
-    } else {
-      return AVAILABLE_NETWORKS[network].connectButton();
-    }
+    return (
+      <div>
+        {wallet ? (
+          <Button
+            color="green"
+            appearance="ghost"
+            style={{ borderColor: "#6474a7", color: "rgba(255, 255, 255, 0.9" }}
+          >
+            {wallet.network_currency_symbol}
+            &nbsp;{wallet.network_currency_amount}
+            &nbsp;({wallet.address.slice(0, 5)}..
+            {wallet.address.slice(
+              wallet.address.length - 5,
+              wallet.address.length
+            )}
+            )
+          </Button>
+        ) : (
+          AVAILABLE_NETWORKS[network].connectButton()
+        )}
+      </div>
+    );
   };
 
   return (
@@ -119,14 +117,6 @@ const Networks = [
   {
     label: <span>Ethereum</span>,
     value: "ethereum",
-  },
-  {
-    label: "Waves Enterprise",
-    value: "waves-enterprise",
-  },
-  {
-    label: "TRON",
-    value: "tron",
   },
 ];
 

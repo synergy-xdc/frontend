@@ -24,8 +24,10 @@ import WethABI from "@/abi/WETH.json";
 import { chains } from "@web3modal/ethereum";
 import { BigNumber, ethers, utils } from "ethers";
 import React from "react";
+const TronWeb = require("tronweb");
 
 const SynergyAddress: string = "0x2f6F4493bb82f00Ed346De9353EF22cA277b7680";
+const SynergyTRONAddress: string = "TQkDaoJsFuYpj8ZZvhaWdSrPTWUNc2ByQ1";
 
 const walletConnectConfig = {
   projectId: "12647116f49027a9b16f4c0598eb6d74",
@@ -54,10 +56,10 @@ const AvailableSynth: Synth[] = [
 ];
 
 class EthereumNetwork extends BaseNetwork {
-  // wethApproveState: TXState = TXState.Done;
-  // mintState: TXState = TXState.Done;
+  wethApproveState: TXState = TXState.Done;
+  mintState: TXState = TXState.Done;
 
-  // showedTxs: string[] = []
+  showedTxs: string[] = [];
 
   connectButton(): ReactNode {
     return (
@@ -71,70 +73,98 @@ class EthereumNetwork extends BaseNetwork {
   }
 
   showWallet(): WalletPrimaryData | null {
-    const { account } = useAccount();
-
-    console.log("I`m in Etherum");
-
-    console.log(account);
-
-    const { data, error, isLoading, refetch } = useBalance({
-      addressOrName: account.address,
-    });
-
-    const [ballance_ef, setBallance_f] = useState("10");
+    const [wallet, setWalet] = useState(null);
 
     useEffect(() => {
-      console.log("I`m in Etherum");
-    }, []);
+      const tron_address = window.localStorage.getItem("tron_address");
 
-    if (account.isConnected == false) {
-      return null;
-    }
-    if (data === undefined) {
-      return null;
-    }
+      if (tron_address) {
+        let wallet: any = {
+          address: tron_address,
+          network_currency_symbol: "ETH",
+          network_currency_amount: "data.formatted",
+        };
 
-    const wallet: WalletPrimaryData = {
-      address: account.address,
-      network_currency_symbol: "ETH",
-      network_currency_amount: data.formatted,
-    };
+        const tronWeb = window.tronWeb;
+
+        var obj = setInterval(async () => {
+          if (
+            window.tronWeb &&
+            window.tronWeb.defaultAddress.base58 &&
+            window.tronWeb.ready
+          ) {
+            let defaultAccount = tronWeb.defaultAddress.base58;
+            window.defaultAccount = defaultAccount;
+
+            window.tronWeb.trx.getBalance(defaultAccount).then((data: any) => {
+              const wallet: any = {
+                address: tron_address,
+                network_currency_symbol: "TRX",
+                network_currency_amount: data,
+              };
+              setWalet(wallet);
+            });
+            clearInterval(obj);
+          }
+        }, 10);
+      }
+    });
+
     return wallet;
   }
 
   getRusdBalance(): Amount | undefined {
-    const { account, isReady } = useAccount();
-    const synergyCallResult = useContractRead({
-      address: SynergyAddress,
-      abi: SynergyABI,
-      functionName: "rUsd",
-      chainId: chains.goerli.id,
+    const parameter1 = [
+      { type: "address", value: "TV3nb5HYFe2xBEmyb3ETe93UGkjAhWyzrs" },
+      { type: "uint256", value: 100 },
+    ];
+
+    useEffect(() => {
+      window.tronWeb.transactionBuilder
+        .triggerConstantContract(
+          window.tronWeb.address.toHex(SynergyTRONAddress),
+          "rUsd()",
+          {},
+          [],
+          window.tronWeb.address.toHex("TR2NPXjAX82cU2soLnUCjG77WE9oMj49uk")
+        )
+        .then((data: any) => {
+          console.log("Data got", data);
+        });
     });
-    const rusdContract = useToken({
-      address: synergyCallResult.data,
-    });
-    const rusdBalanceOfCall = useContractRead({
-      address: synergyCallResult.data as string,
-      abi: RusdABI,
-      functionName: "balanceOf",
-      args: [account.address],
-      chainId: chains.goerli.id,
-    });
-    useContractEvent({
-      address: synergyCallResult.data ? synergyCallResult.data : "0x0",
-      abi: WethABI,
-      eventName: "Transfer",
-      listener: (...event) => {
-        rusdBalanceOfCall.refetch().then((val) => val);
-      },
-    });
-    if (
-      rusdBalanceOfCall.data !== undefined &&
-      rusdContract.data?.decimals !== undefined
-    ) {
-      const balance: BigNumber = rusdBalanceOfCall.data as BigNumber;
-      return new Amount(balance, rusdContract.data.decimals);
-    }
+
+    // const { account, isReady } = useAccount();
+    // const synergyCallResult = useContractRead({
+    //   address: SynergyAddress,
+    //   abi: SynergyABI,
+    //   functionName: "rUsd",
+    //   chainId: chains.goerli.id,
+    // });
+    // const rusdContract = useToken({
+    //   address: synergyCallResult.data,
+    // });
+    // const rusdBalanceOfCall = useContractRead({
+    //   address: synergyCallResult.data as string,
+    //   abi: RusdABI,
+    //   functionName: "balanceOf",
+    //   args: [account.address],
+    //   chainId: chains.goerli.id,
+    // });
+    // useContractEvent({
+    //   address: synergyCallResult.data ? synergyCallResult.data : "0x0",
+    //   abi: WethABI,
+    //   eventName: "Transfer",
+    //   listener: (...event) => {
+    //     rusdBalanceOfCall.refetch().then((val) => val);
+    //   },
+    // });
+    // if (
+    //   rusdBalanceOfCall.data !== undefined &&
+    //   rusdContract.data?.decimals !== undefined
+    // ) {
+    //   const balance: BigNumber = rusdBalanceOfCall.data as BigNumber;
+    //   return new Amount(balance, rusdContract.data.decimals);
+    // }
     return undefined;
   }
 

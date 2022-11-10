@@ -82,7 +82,6 @@ class EthereumNetwork extends BaseNetwork {
             network_currency_amount: data.formatted
         };
         return wallet
-        return null
     }
 
     // getRusdBalance(): Amount | undefined {

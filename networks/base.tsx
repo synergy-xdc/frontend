@@ -87,7 +87,7 @@ export class Amount {
 }
 
 abstract class BaseNetwork {
-    abstract showWallet(): WalletPrimaryData | null | any
+    abstract showWallet(): WalletPrimaryData | null
     abstract connectButton(): ReactNode
     abstract getRusdBalance(): Amount | undefined
     abstract getAvailableSynths(): Synth[]

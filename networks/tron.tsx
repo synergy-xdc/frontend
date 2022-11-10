@@ -82,7 +82,7 @@ class TronNetwork extends BaseNetwork {
 
     const tronWeb = window.tronWeb;
     // const balance = await tronWeb.trx.getBalance(tron_address);
-    console.log("Balance", balance);
+    // console.log("Balance", balance);
 
     if (!tron_address) {
       return null;

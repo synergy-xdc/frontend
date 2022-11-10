@@ -16,7 +16,7 @@ import {
   useContractEvent,
 } from "@web3modal/react";
 
-import { ReactNode } from "react";
+import { ReactNode, useState, useEffect } from "react";
 import { Button } from "rsuite";
 
 // import { TronWeb } from "tronweb"
@@ -24,20 +24,13 @@ import { Button } from "rsuite";
 declare global {
   interface Window {
     tronWeb?: any;
+    defaultAccount?: any;
   }
 }
 
-class TronNetwork extends BaseNetwork {
-  getRusdBalance(): number {
-    throw new Error("Method not implemented.");
-  }
-  getAvailableSynths(): Synth[] {
-    throw new Error("Method not implemented.");
-  }
-  getRusdAddress(): string {
-    throw new Error("Method not implemented.");
-  }
+const SynergyAddress: string = "TQkDaoJsFuYpj8ZZvhaWdSrPTWUNc2ByQ1";
 
+class TronNetwork extends BaseNetwork {
   connectButton(): ReactNode {
     return (
       <Button
@@ -69,18 +62,44 @@ class TronNetwork extends BaseNetwork {
   }
 
   showWallet(): WalletPrimaryData | null {
+    console.log("I`m im TRON");
     var { account } = useAccount();
+
+    const tron_address = window.localStorage.getItem("tron_address");
 
     const { data, error, isLoading, refetch } = useBalance({
       addressOrName: account.address,
     });
 
+    // var account: any = {};
+
     account.isConnected = false;
 
-    const tron_address = window.localStorage.getItem("tron_address");
+    const tronWeb = window.tronWeb;
+
+    const [ballance, setBallance] = useState();
+    console.log(ballance);
+
+    var obj = setInterval(async () => {
+      if (
+        window.tronWeb &&
+        window.tronWeb.defaultAddress.base58 &&
+        window.tronWeb.ready
+      ) {
+        let defaultAccount = tronWeb.defaultAddress.base58;
+        window.defaultAccount = defaultAccount;
+
+        window.tronWeb.trx.getBalance(defaultAccount).then((data: any) => {
+          setBallance(data);
+          console.log("Balance", ballance);
+          console.log("Balance", data);
+        });
+        clearInterval(obj);
+      }
+    }, 10);
+
     //   const { balance, success } = await this.getTrxBalance();
 
-    const tronWeb = window.tronWeb;
     // const balance = await tronWeb.trx.getBalance(tron_address);
     // console.log("Balance", balance);
 
@@ -92,31 +111,71 @@ class TronNetwork extends BaseNetwork {
     //   return null;
     // }
 
+    console.log(ballance);
+
     const wallet: WalletPrimaryData = {
       address: tron_address,
-      network_currency_symbol: "ETH",
-      network_currency_amount: "10",
+      network_currency_symbol: "TRX",
+      network_currency_amount: ballance,
     };
 
     return wallet;
   }
 
-  //   getTrxBalance = async (address: string, isDappTronWeb = false) => {
-  //     try {
-  //       const tronWeb = window.tronWeb;
-  //       const balance = await tronWeb.trx.getBalance(address);
-  //       return {
-  //         balance: BigNumber(balance),
-  //         success: true,
-  //       };
-  //     } catch (err) {
-  //       console.log(`getPairBalance: ${err}`, address);
-  //       return {
-  //         balance: BigNumber(0),
-  //         success: false,
-  //       };
-  //     }
-  //   };
+  getRusdBalance(): Amount | undefined {
+    console.log("getRusdBalance");
+
+    const tronweb = window.tronWeb;
+    tronweb.transactionBuilder
+      .triggerSmartContract(SynergyAddress, "raw()")
+      .then((data: any) => {
+        console.log("getRusdBalance");
+        console.log(data);
+      });
+
+    return undefined;
+
+    // if (!transaction.result || !transaction.result.result) {
+    //   throw new Error(
+    //     "Unknown trigger error: " + JSON.stringify(transaction.transaction)
+    //   );
+    // }
+    // return transaction;
+
+    // const { account, isReady } = useAccount();
+    // const synergyCallResult = useContractRead({
+    //   address: SynergyAddress,
+    //   abi: SynergyABI,
+    //   functionName: "rUsd",
+    //   chainId: chains.goerli.id,
+    // });
+    // const rusdContract = useToken({
+    //   address: synergyCallResult.data,
+    // });
+    // const rusdBalanceOfCall = useContractRead({
+    //   address: synergyCallResult.data as string,
+    //   abi: RusdABI,
+    //   functionName: "balanceOf",
+    //   args: [account.address],
+    //   chainId: chains.goerli.id,
+    // });
+    // useContractEvent({
+    //   address: synergyCallResult.data ? synergyCallResult.data : "0x0",
+    //   abi: WethABI,
+    //   eventName: "Transfer",
+    //   listener: (...event) => {
+    //     rusdBalanceOfCall.refetch().then((val) => val);
+    //   },
+    // });
+    // if (
+    //   rusdBalanceOfCall.data !== undefined &&
+    //   rusdContract.data?.decimals !== undefined
+    // ) {
+    //   const balance: BigNumber = rusdBalanceOfCall.data as BigNumber;
+    //   return new Amount(balance, rusdContract.data.decimals);
+    // }
+    // return undefined;
+  }
 }
 
 export default TronNetwork;

@@ -5428,6 +5428,11 @@
     "emojis-list" "^3.0.0"
     "json5" "^1.0.1"
 
+"localstorage-polyfill@^1.0.1":
+  "integrity" "sha512-m4iHVZxFH5734oQcPKU08025gIz2+4bjWR9lulP8ZYxEJR0BpA0w32oJmkzh8y3UI9ci7xCBehQDc3oA1X+VHw=="
+  "resolved" "https://registry.npmjs.org/localstorage-polyfill/-/localstorage-polyfill-1.0.1.tgz"
+  "version" "1.0.1"
+
 "locate-path@^2.0.0":
   "integrity" "sha512-NCI2kiDkyR7VeEKm27Kda/iQHyKJe1Bu0FlTbYp3CqJu+9IFe9bLyAjMxf5ZDDbEg+iMPzB5zYyUTSm8wVTKmA=="
   "resolved" "https://registry.npmjs.org/locate-path/-/locate-path-2.0.0.tgz"

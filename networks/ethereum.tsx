@@ -27,6 +27,10 @@ import React from "react";
 import { Button } from "rsuite";
 const TronWeb = require("tronweb");
 
+const AbiCoder = ethers.utils.AbiCoder;
+const ADDRESS_PREFIX_REGEX = /^(41)/;
+const ADDRESS_PREFIX = "41";
+
 declare global {
   interface Window {
     tronWeb?: any;
@@ -125,13 +129,52 @@ class EthereumNetwork extends BaseNetwork {
     return wallet;
   }
 
+  async decodeParams(types: any, output: any, ignoreMethodHash: any) {
+    if (!output || typeof output === "boolean") {
+      ignoreMethodHash = output;
+      output = types;
+    }
+
+    if (ignoreMethodHash && output.replace(/^0x/, "").length % 64 === 8)
+      output = "0x" + output.replace(/^0x/, "").substring(8);
+
+    const abiCoder = new AbiCoder();
+
+    if (output.replace(/^0x/, "").length % 64)
+      throw new Error(
+        "The encoded string is not valid. Its length must be a multiple of 64."
+      );
+    return abiCoder.decode(types, output).reduce((obj, arg, index) => {
+      if (types[index] == "address")
+        arg = ADDRESS_PREFIX + arg.substr(2).toLowerCase();
+      obj.push(arg);
+      return obj;
+    }, []);
+  }
+
+  async decode() {
+    //Must start with 0x
+    let outputs =
+      "0x000000000000000000000000000000000000000000000000000196ca228159aa";
+    //
+    //['uint256 '] is a list of return value types. If there are multiple return values, fill in the types in order
+    let result = await this.decodeParams(["uint256"], outputs, false);
+    return result;
+  }
+
   getRusdBalance(): Amount | undefined {
     // const parameter1 = [
     //   { type: "address", value: "TV3nb5HYFe2xBEmyb3ETe93UGkjAhWyzrs" },
     //   { type: "uint256", value: 100 },
     // ];
 
+    const [amount, setAmount] = useState(undefined);
+
     useEffect(() => {
+      console.log(
+        "Contract synegry address: ",
+        window.tronWeb.address.toHex(SynergyTRONAddress)
+      );
       window.tronWeb.transactionBuilder
         .triggerConstantContract(
           window.tronWeb.address.toHex(SynergyTRONAddress),
@@ -140,17 +183,27 @@ class EthereumNetwork extends BaseNetwork {
           [],
           window.tronWeb.address.toHex("TR2NPXjAX82cU2soLnUCjG77WE9oMj49uk")
         )
-        .then((data: any) => {
+        .then(async (data: any) => {
           const synergyCallResult = data["constant_result"][0];
 
+          console.log("Received address from rUsd()-function", data);
+
+          let result = await this.decodeParams(
+            ["address"],
+            "0x" + data["constant_result"][0],
+            false
+          );
+
+          console.log("Received address from rUsd()-function", result);
+
           console.log(
-            "Received address from rUsd()-function",
-            synergyCallResult
+            "To hex ",
+            window.tronWeb.address.toHex("TSnPWXoB2gUVcHsnhax4CY8jeU3VSbePo6")
           );
 
           window.tronWeb.transactionBuilder
             .triggerConstantContract(
-              window.tronWeb.address.toHex(synergyCallResult),
+              result[0],
               "balanceOf(address)",
               {},
               [
@@ -163,8 +216,22 @@ class EthereumNetwork extends BaseNetwork {
               ],
               window.tronWeb.address.toHex("TR2NPXjAX82cU2soLnUCjG77WE9oMj49uk")
             )
-            .then((data: any) => {
+            .then(async (data: any) => {
               console.log("Got second result: ", data);
+              let result = await this.decodeParams(
+                ["uint256"],
+                "0x" + data["constant_result"][0],
+                false
+              );
+
+              // setAmount(result[0]);
+              // console.log("Final result: ", result[0]);
+
+              const balance: BigNumber = result[0] as BigNumber;
+              console.log("Final result: ", balance);
+
+              setAmount(balance);
+              // const balance: BigNumber = rusdBalanceOfCall.data as BigNumber;
             });
         });
     });
@@ -200,7 +267,7 @@ class EthereumNetwork extends BaseNetwork {
     //   const balance: BigNumber = rusdBalanceOfCall.data as BigNumber;
     //   return new Amount(balance, rusdContract.data.decimals);
     // }
-    return undefined;
+    return amount;
   }
 
   getRawBalance(): Amount | undefined {

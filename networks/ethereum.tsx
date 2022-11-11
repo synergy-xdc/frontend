@@ -24,7 +24,14 @@ import WethABI from "@/abi/WETH.json";
 import { chains } from "@web3modal/ethereum";
 import { BigNumber, ethers, utils } from "ethers";
 import React from "react";
+import { Button } from "rsuite";
 const TronWeb = require("tronweb");
+
+declare global {
+  interface Window {
+    tronWeb?: any;
+  }
+}
 
 const SynergyAddress: string = "0x2f6F4493bb82f00Ed346De9353EF22cA277b7680";
 const SynergyTRONAddress: string = "TQkDaoJsFuYpj8ZZvhaWdSrPTWUNc2ByQ1";
@@ -63,61 +70,66 @@ class EthereumNetwork extends BaseNetwork {
 
   connectButton(): ReactNode {
     return (
-      <>
-        <Web3Modal config={walletConnectConfig} />
-        <div id="ethereum-connect-button" style={{ color: "white" }}>
-          <ConnectButton />
-        </div>
-      </>
+      <Button
+        style={{ backgroundColor: "linear-gradient(transparent, #089a81)" }}
+        appearance="primary"
+        onClick={this.getTronweb}
+      >
+        Connect Wallet
+      </Button>
     );
+  }
+
+  getTronweb() {
+    console.log("connect wallet operation");
+    var obj = setInterval(async () => {
+      if (window.tronWeb && !window.tronWeb.defaultAddress.base58) {
+        clearInterval(obj);
+        console.log("TronLink extension is installed but user not logged it");
+      }
+
+      if (window.tronWeb && window.tronWeb.defaultAddress.base58) {
+        clearInterval(obj);
+        const tron_address = window.tronWeb.defaultAddress.base58;
+
+        window.localStorage.setItem("tron_address", tron_address);
+        console.log(`set localStorage item tron_address: ${tron_address}`);
+      }
+    }, 10);
   }
 
   showWallet(): WalletPrimaryData | null {
     const [wallet, setWalet] = useState(null);
 
     useEffect(() => {
-      const tron_address = window.localStorage.getItem("tron_address");
-
-      if (tron_address) {
-        let wallet: any = {
-          address: tron_address,
-          network_currency_symbol: "ETH",
-          network_currency_amount: "data.formatted",
-        };
-
+      var obj = setInterval(async () => {
         const tronWeb = window.tronWeb;
 
-        var obj = setInterval(async () => {
-          if (
-            window.tronWeb &&
-            window.tronWeb.defaultAddress.base58 &&
-            window.tronWeb.ready
-          ) {
-            let defaultAccount = tronWeb.defaultAddress.base58;
-            window.defaultAccount = defaultAccount;
+        if (tronWeb && tronWeb.defaultAddress.base58 && tronWeb.ready) {
+          let defaultAccount = tronWeb.defaultAddress.base58;
 
-            window.tronWeb.trx.getBalance(defaultAccount).then((data: any) => {
-              const wallet: any = {
-                address: tron_address,
-                network_currency_symbol: "TRX",
-                network_currency_amount: data,
-              };
-              setWalet(wallet);
-            });
-            clearInterval(obj);
-          }
-        }, 10);
-      }
+          tronWeb.trx.getBalance(defaultAccount).then((data: any) => {
+            const wallet: any = {
+              address: defaultAccount,
+              network_currency_symbol: "TRX",
+              network_currency_amount: data,
+            };
+
+            setWalet(wallet);
+          });
+
+          clearInterval(obj);
+        }
+      }, 10);
     });
-
     return wallet;
   }
 
   getRusdBalance(): Amount | undefined {
-    const parameter1 = [
-      { type: "address", value: "TV3nb5HYFe2xBEmyb3ETe93UGkjAhWyzrs" },
-      { type: "uint256", value: 100 },
-    ];
+    // const parameter1 = [
+    //   { type: "address", value: "TV3nb5HYFe2xBEmyb3ETe93UGkjAhWyzrs" },
+    //   { type: "uint256", value: 100 },
+    // ];
 
     useEffect(() => {
       window.tronWeb.transactionBuilder
@@ -129,11 +141,34 @@ class EthereumNetwork extends BaseNetwork {
           window.tronWeb.address.toHex("TR2NPXjAX82cU2soLnUCjG77WE9oMj49uk")
         )
         .then((data: any) => {
-          console.log("Data got", data);
+          const synergyCallResult = data["constant_result"][0];
+
+          console.log(
+            "Received address from rUsd()-function",
+            synergyCallResult
+          );
+
+          window.tronWeb.transactionBuilder
+            .triggerConstantContract(
+              window.tronWeb.address.toHex(synergyCallResult),
+              "balanceOf(address)",
+              {},
+              [
+                {
+                  type: "address",
+                  value: window.tronWeb.address.toHex(
+                    "TR2NPXjAX82cU2soLnUCjG77WE9oMj49uk"
+                  ),
+                },
+              ],
+              window.tronWeb.address.toHex("TR2NPXjAX82cU2soLnUCjG77WE9oMj49uk")
+            )
+            .then((data: any) => {
+              console.log("Got second result: ", data);
+            });
         });
     });
 
-    // const { account, isReady } = useAccount();
     // const synergyCallResult = useContractRead({
     //   address: SynergyAddress,
     //   abi: SynergyABI,

@@ -142,125 +142,146 @@ class EthereumNetwork extends BaseNetwork {
   }
 
   getRusdBalance(): Amount | undefined {
+    // const [amount, setAmount] = useState(undefined);
+    // useEffect(() => {
+    //   const getAmount = async () => {
+    //     const HexSynergyTRONAddress =
+    //       window.tronWeb.address.toHex(SynergyTRONAddress);
+    //     const HexUserAddress = window.tronWeb.address.toHex(
+    //       "TR2NPXjAX82cU2soLnUCjG77WE9oMj49uk"
+    //     );
+    //     const rUsdTransaction =
+    //       await window.tronWeb.transactionBuilder.triggerConstantContract(
+    //         HexSynergyTRONAddress,
+    //         "rUsd()",
+    //         {},
+    //         [],
+    //         HexUserAddress
+    //       );
+    //     const rUsdTransactionResult = rUsdTransaction["constant_result"][0];
+    //     const rUsdTransactionResultDecoded = await this.decodeParams(
+    //       ["address"],
+    //       "0x" + rUsdTransactionResult,
+    //       false
+    //     );
+    //     // console.log(
+    //     //   "Received address from rUsd()-function",
+    //     //   rUsdTransactionResultDecoded[0]
+    //     // );
+    //     const balanceOfTransaction =
+    //       await window.tronWeb.transactionBuilder.triggerConstantContract(
+    //         rUsdTransactionResultDecoded[0],
+    //         "balanceOf(address)",
+    //         {},
+    //         [
+    //           {
+    //             type: "address",
+    //             value: HexUserAddress,
+    //           },
+    //         ],
+    //         HexUserAddress
+    //       );
+    //     const balanceOfTransactionResult =
+    //       balanceOfTransaction["constant_result"][0];
+    //     const balanceOfTransactionResultDecoded = await this.decodeParams(
+    //       ["uint256"],
+    //       "0x" + balanceOfTransactionResult,
+    //       false
+    //     );
+    //     const amount: any = new Amount(
+    //       balanceOfTransactionResultDecoded[0],
+    //       10
+    //     );
+    //     setAmount(amount);
+    //   };
+    //   getAmount();
+    // });
+    // return amount;
+  }
+
+  getRawBalance(): Amount | undefined {
     const [amount, setAmount] = useState(undefined);
-
     useEffect(() => {
-      window.tronWeb.transactionBuilder
-        .triggerConstantContract(
-          window.tronWeb.address.toHex(SynergyTRONAddress),
-          "rUsd()",
-          {},
-          [],
-          window.tronWeb.address.toHex("TR2NPXjAX82cU2soLnUCjG77WE9oMj49uk")
-        )
-        .then(async (data: any) => {
-          const synergyCallResult = data["constant_result"][0];
-
-          console.log("Received address from rUsd()-function", data);
-
-          let result = await this.decodeParams(
-            ["address"],
-            "0x" + data["constant_result"][0],
-            false
+      const getAmount = async () => {
+        const HexSynergyTRONAddress =
+          window.tronWeb.address.toHex(SynergyTRONAddress);
+        const HexUserAddress = window.tronWeb.address.toHex(
+          "TR2NPXjAX82cU2soLnUCjG77WE9oMj49uk"
+        );
+        const rawTransaction =
+          await window.tronWeb.transactionBuilder.triggerConstantContract(
+            HexSynergyTRONAddress,
+            "raw()",
+            {},
+            [],
+            HexUserAddress
           );
-
-          console.log("Received address from rUsd()-function", result);
-
-          console.log(
-            "To hex ",
-            window.tronWeb.address.toHex("TSnPWXoB2gUVcHsnhax4CY8jeU3VSbePo6")
+        const rawTransactionResult = rawTransaction["constant_result"][0];
+        const rawTransactionResultDecoded = await this.decodeParams(
+          ["address"],
+          "0x" + rawTransactionResult,
+          false
+        );
+        const balanceOfTransaction =
+          await window.tronWeb.transactionBuilder.triggerConstantContract(
+            rawTransactionResultDecoded[0],
+            "balanceOf(address)",
+            {},
+            [
+              {
+                type: "address",
+                value: HexUserAddress,
+              },
+            ],
+            HexUserAddress
           );
-
-          window.tronWeb.transactionBuilder
-            .triggerConstantContract(
-              result[0],
-              "balanceOf(address)",
-              {},
-              [
-                {
-                  type: "address",
-                  value: window.tronWeb.address.toHex(
-                    "TR2NPXjAX82cU2soLnUCjG77WE9oMj49uk"
-                  ),
-                },
-              ],
-              window.tronWeb.address.toHex("TR2NPXjAX82cU2soLnUCjG77WE9oMj49uk")
-            )
-            .then(async (data: any) => {
-              console.log("Got second result: ", data);
-
-              let result = await this.decodeParams(
-                ["uint256"],
-                "0x" + data["constant_result"][0],
-                false
-              );
-
-              const balance: BigNumber = result[0] as BigNumber;
-              console.log("Final result: ", balance);
-              const amount: any = new Amount(balance, 10);
-              setAmount(amount);
-            });
-        });
+        const balanceOfTransactionResult =
+          balanceOfTransaction["constant_result"][0];
+        const balanceOfTransactionResultDecoded = await this.decodeParams(
+          ["uint256"],
+          "0x" + balanceOfTransactionResult,
+          false
+        );
+        console.log(balanceOfTransactionResultDecoded);
+        const amount: any = new Amount(
+          balanceOfTransactionResultDecoded[0],
+          10
+        );
+        setAmount(amount);
+      };
+      getAmount();
     });
     return amount;
   }
 
-  getRawBalance(): Amount | undefined {
-    const { account, isReady } = useAccount();
-    const synergyCallResult = useContractRead({
-      address: SynergyAddress,
-      abi: SynergyABI,
-      functionName: "raw",
-      chainId: chains.goerli.id,
-    });
-    const rawContract = useToken({
-      address: synergyCallResult.data,
-    });
-    const rawBalanceOfCall = useContractRead({
-      address: synergyCallResult.data as string,
-      abi: RawABI,
-      functionName: "balanceOf",
-      args: [account.address],
-      chainId: chains.goerli.id,
-    });
-    if (
-      rawBalanceOfCall.data !== undefined &&
-      rawContract.data?.decimals !== undefined
-    ) {
-      const balance: BigNumber = rawBalanceOfCall.data as BigNumber;
-      return new Amount(balance, rawContract.data.decimals);
-    }
-    return undefined;
-  }
-
   getRawPrice(): Amount | undefined {
-    const { account, isReady } = useAccount();
-    const oracleContractAddressCall = useContractRead({
-      address: SynergyAddress,
-      abi: SynergyABI,
-      functionName: "oracle",
-      chainId: chains.goerli.id,
-    });
-    const rawContractAddressCall = useContractRead({
-      address: SynergyAddress,
-      abi: SynergyABI,
-      functionName: "raw",
-      chainId: chains.goerli.id,
-    });
-    const rawPriceCall = useContractRead({
-      address: oracleContractAddressCall.data as string,
-      abi: OracleABI,
-      functionName: "getPrice",
-      args: [rawContractAddressCall.data],
-      chainId: chains.goerli.id,
-    });
-    if (rawPriceCall.data !== undefined) {
-      const rawPrice = rawPriceCall.data[0] as BigNumber;
-      const rawPriceDecimals = rawPriceCall.data[1];
-      return new Amount(rawPrice, rawPriceDecimals);
-    } else {
-      return undefined;
-    }
+    // const { account, isReady } = useAccount();
+    // const oracleContractAddressCall = useContractRead({
+    //   address: SynergyAddress,
+    //   abi: SynergyABI,
+    //   functionName: "oracle",
+    //   chainId: chains.goerli.id,
+    // });
+    // const rawContractAddressCall = useContractRead({
+    //   address: SynergyAddress,
+    //   abi: SynergyABI,
+    //   functionName: "raw",
+    //   chainId: chains.goerli.id,
+    // });
+    // const rawPriceCall = useContractRead({
+    //   address: oracleContractAddressCall.data as string,
+    //   abi: OracleABI,
+    //   functionName: "getPrice",
+    //   args: [rawContractAddressCall.data],
+    //   chainId: chains.goerli.id,
+    // });
+    // if (rawPriceCall.data !== undefined) {
+    //   const rawPrice = rawPriceCall.data[0] as BigNumber;
+    //   const rawPriceDecimals = rawPriceCall.data[1];
+    //   return new Amount(rawPrice, rawPriceDecimals);
+    // } else {
+    //   return undefined;
+    // }
   }
 
   getWethPrice(): number | undefined {

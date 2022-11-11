@@ -142,65 +142,65 @@ class EthereumNetwork extends BaseNetwork {
   }
 
   getRusdBalance(): Amount | undefined {
-    // const [amount, setAmount] = useState(undefined);
-    // useEffect(() => {
-    //   const getAmount = async () => {
-    //     const HexSynergyTRONAddress =
-    //       window.tronWeb.address.toHex(SynergyTRONAddress);
-    //     const HexUserAddress = window.tronWeb.address.toHex(
-    //       "TR2NPXjAX82cU2soLnUCjG77WE9oMj49uk"
-    //     );
-    //     const rUsdTransaction =
-    //       await window.tronWeb.transactionBuilder.triggerConstantContract(
-    //         HexSynergyTRONAddress,
-    //         "rUsd()",
-    //         {},
-    //         [],
-    //         HexUserAddress
-    //       );
-    //     const rUsdTransactionResult = rUsdTransaction["constant_result"][0];
-    //     const rUsdTransactionResultDecoded = await this.decodeParams(
-    //       ["address"],
-    //       "0x" + rUsdTransactionResult,
-    //       false
-    //     );
-    //     // console.log(
-    //     //   "Received address from rUsd()-function",
-    //     //   rUsdTransactionResultDecoded[0]
-    //     // );
-    //     const balanceOfTransaction =
-    //       await window.tronWeb.transactionBuilder.triggerConstantContract(
-    //         rUsdTransactionResultDecoded[0],
-    //         "balanceOf(address)",
-    //         {},
-    //         [
-    //           {
-    //             type: "address",
-    //             value: HexUserAddress,
-    //           },
-    //         ],
-    //         HexUserAddress
-    //       );
-    //     const balanceOfTransactionResult =
-    //       balanceOfTransaction["constant_result"][0];
-    //     const balanceOfTransactionResultDecoded = await this.decodeParams(
-    //       ["uint256"],
-    //       "0x" + balanceOfTransactionResult,
-    //       false
-    //     );
-    //     const amount: any = new Amount(
-    //       balanceOfTransactionResultDecoded[0],
-    //       10
-    //     );
-    //     setAmount(amount);
-    //   };
-    //   getAmount();
-    // });
-    // return amount;
+    const [amount, setAmount] = useState(undefined);
+    useEffect(() => {
+      const getAmount = async () => {
+        const HexSynergyTRONAddress =
+          window.tronWeb.address.toHex(SynergyTRONAddress);
+        const HexUserAddress = window.tronWeb.address.toHex(
+          "TR2NPXjAX82cU2soLnUCjG77WE9oMj49uk"
+        );
+        const rUsdTransaction =
+          await window.tronWeb.transactionBuilder.triggerConstantContract(
+            HexSynergyTRONAddress,
+            "rUsd()",
+            {},
+            [],
+            HexUserAddress
+          );
+        const rUsdTransactionResult = rUsdTransaction["constant_result"][0];
+        const rUsdTransactionResultDecoded = await this.decodeParams(
+          ["address"],
+          "0x" + rUsdTransactionResult,
+          false
+        );
+        const balanceOfTransaction =
+          await window.tronWeb.transactionBuilder.triggerConstantContract(
+            rUsdTransactionResultDecoded[0],
+            "balanceOf(address)",
+            {},
+            [
+              {
+                type: "address",
+                value: HexUserAddress,
+              },
+            ],
+            HexUserAddress
+          );
+        const balanceOfTransactionResult =
+          balanceOfTransaction["constant_result"][0];
+        const balanceOfTransactionResultDecoded = await this.decodeParams(
+          ["uint256"],
+          "0x" + balanceOfTransactionResult,
+          false
+        );
+        const amount: any = new Amount(
+          balanceOfTransactionResultDecoded[0],
+          18
+        );
+
+        console.log("Transaction, ", balanceOfTransaction);
+        setAmount(amount);
+      };
+      getAmount();
+    }, []);
+    return amount;
   }
 
   getRawBalance(): Amount | undefined {
     const [amount, setAmount] = useState(undefined);
+
+    console.log("anna");
     useEffect(() => {
       const getAmount = async () => {
         const HexSynergyTRONAddress =
@@ -245,36 +245,87 @@ class EthereumNetwork extends BaseNetwork {
         console.log(balanceOfTransactionResultDecoded);
         const amount: any = new Amount(
           balanceOfTransactionResultDecoded[0],
-          10
+          18
         );
         setAmount(amount);
       };
       getAmount();
-    });
+    }, []);
     return amount;
   }
 
   getRawPrice(): Amount | undefined {
-    // const { account, isReady } = useAccount();
-    // const oracleContractAddressCall = useContractRead({
-    //   address: SynergyAddress,
-    //   abi: SynergyABI,
-    //   functionName: "oracle",
-    //   chainId: chains.goerli.id,
-    // });
-    // const rawContractAddressCall = useContractRead({
-    //   address: SynergyAddress,
-    //   abi: SynergyABI,
-    //   functionName: "raw",
-    //   chainId: chains.goerli.id,
-    // });
-    // const rawPriceCall = useContractRead({
-    //   address: oracleContractAddressCall.data as string,
-    //   abi: OracleABI,
-    //   functionName: "getPrice",
-    //   args: [rawContractAddressCall.data],
-    //   chainId: chains.goerli.id,
-    // });
+    const [amount, setAmount] = useState(undefined);
+    useEffect(() => {
+      const getAmount = async () => {
+        const HexSynergyTRONAddress =
+          window.tronWeb.address.toHex(SynergyTRONAddress);
+        const HexUserAddress = window.tronWeb.address.toHex(
+          "TR2NPXjAX82cU2soLnUCjG77WE9oMj49uk"
+        );
+        const oracleContractAddressCall =
+          await window.tronWeb.transactionBuilder.triggerConstantContract(
+            HexSynergyTRONAddress,
+            "oracle()",
+            {},
+            [],
+            HexUserAddress
+          );
+
+        const oracleContractAddress =
+          oracleContractAddressCall["constant_result"][0];
+
+        const oracleContractAddressDecoded = await this.decodeParams(
+          ["address"],
+          "0x" + oracleContractAddress,
+          false
+        );
+
+        const rawContractAddressCall =
+          await window.tronWeb.transactionBuilder.triggerConstantContract(
+            HexSynergyTRONAddress,
+            "raw()",
+            {},
+            [],
+            HexUserAddress
+          );
+
+        const rawContractAddress = rawContractAddressCall["constant_result"][0];
+
+        const rawContractAddressDecoded = await this.decodeParams(
+          ["address"],
+          "0x" + rawContractAddress,
+          false
+        );
+
+        const rawPriceCall =
+          await window.tronWeb.transactionBuilder.triggerConstantContract(
+            oracleContractAddressDecoded[0],
+            "getPrice(address)",
+            {},
+            [
+              {
+                type: "address",
+                value: rawContractAddressDecoded[0],
+              },
+            ],
+            HexUserAddress
+          );
+
+        const rawPrice = rawPriceCall["constant_result"][0];
+        const rawPriceDecoded = await this.decodeParams(
+          ["uint256"],
+          "0x" + rawPrice,
+          false
+        );
+
+        const amount: any = new Amount(rawPriceDecoded[0], 18);
+        setAmount(amount);
+      };
+      getAmount();
+    }, []);
+    return amount;
+
     // if (rawPriceCall.data !== undefined) {
     //   const rawPrice = rawPriceCall.data[0] as BigNumber;
     //   const rawPriceDecimals = rawPriceCall.data[1];

@@ -40,17 +40,6 @@ declare global {
 const SynergyAddress: string = "0x2f6F4493bb82f00Ed346De9353EF22cA277b7680";
 const SynergyTRONAddress: string = "TQkDaoJsFuYpj8ZZvhaWdSrPTWUNc2ByQ1";
 
-const walletConnectConfig = {
-  projectId: "12647116f49027a9b16f4c0598eb6d74",
-  theme: "dark",
-  accentColor: "default",
-  ethereum: {
-    appName: "web3Modal",
-    autoConnect: true,
-    chains: [chains.goerli],
-  },
-};
-
 const AvailableSynth: Synth[] = [
   {
     address: "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2",
@@ -152,29 +141,10 @@ class EthereumNetwork extends BaseNetwork {
     }, []);
   }
 
-  async decode() {
-    //Must start with 0x
-    let outputs =
-      "0x000000000000000000000000000000000000000000000000000196ca228159aa";
-    //
-    //['uint256 '] is a list of return value types. If there are multiple return values, fill in the types in order
-    let result = await this.decodeParams(["uint256"], outputs, false);
-    return result;
-  }
-
   getRusdBalance(): Amount | undefined {
-    // const parameter1 = [
-    //   { type: "address", value: "TV3nb5HYFe2xBEmyb3ETe93UGkjAhWyzrs" },
-    //   { type: "uint256", value: 100 },
-    // ];
-
     const [amount, setAmount] = useState(undefined);
 
     useEffect(() => {
-      console.log(
-        "Contract synegry address: ",
-        window.tronWeb.address.toHex(SynergyTRONAddress)
-      );
       window.tronWeb.transactionBuilder
         .triggerConstantContract(
           window.tronWeb.address.toHex(SynergyTRONAddress),
@@ -218,55 +188,20 @@ class EthereumNetwork extends BaseNetwork {
             )
             .then(async (data: any) => {
               console.log("Got second result: ", data);
+
               let result = await this.decodeParams(
                 ["uint256"],
                 "0x" + data["constant_result"][0],
                 false
               );
 
-              // setAmount(result[0]);
-              // console.log("Final result: ", result[0]);
-
               const balance: BigNumber = result[0] as BigNumber;
               console.log("Final result: ", balance);
-
-              setAmount(balance);
-              // const balance: BigNumber = rusdBalanceOfCall.data as BigNumber;
+              const amount: any = new Amount(balance, 10);
+              setAmount(amount);
             });
         });
     });
-
-    // const synergyCallResult = useContractRead({
-    //   address: SynergyAddress,
-    //   abi: SynergyABI,
-    //   functionName: "rUsd",
-    //   chainId: chains.goerli.id,
-    // });
-    // const rusdContract = useToken({
-    //   address: synergyCallResult.data,
-    // });
-    // const rusdBalanceOfCall = useContractRead({
-    //   address: synergyCallResult.data as string,
-    //   abi: RusdABI,
-    //   functionName: "balanceOf",
-    //   args: [account.address],
-    //   chainId: chains.goerli.id,
-    // });
-    // useContractEvent({
-    //   address: synergyCallResult.data ? synergyCallResult.data : "0x0",
-    //   abi: WethABI,
-    //   eventName: "Transfer",
-    //   listener: (...event) => {
-    //     rusdBalanceOfCall.refetch().then((val) => val);
-    //   },
-    // });
-    // if (
-    //   rusdBalanceOfCall.data !== undefined &&
-    //   rusdContract.data?.decimals !== undefined
-    // ) {
-    //   const balance: BigNumber = rusdBalanceOfCall.data as BigNumber;
-    //   return new Amount(balance, rusdContract.data.decimals);
-    // }
     return amount;
   }
 
@@ -420,13 +355,6 @@ class EthereumNetwork extends BaseNetwork {
         wethAllowanceCall.refetch().then((val) => val);
       },
     });
-    // useEffect(() => {
-    //     async function update() {
-    //         console.log(1)
-    //         await wethAllowanceCall.refetch()
-    //     }
-    //     update();
-    // }, [])
     if (
       wethAllowanceCall.data !== undefined &&
       wethContract.data?.decimals !== undefined

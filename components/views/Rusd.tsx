@@ -12,6 +12,8 @@ import {
   Button,
   ButtonGroup,
   useToaster,
+  Stack,
+  IconButton,
 } from "rsuite";
 
 import {
@@ -21,6 +23,7 @@ import {
 } from "@/components/WalletNotification";
 import { Amount, TXState } from "@/networks/base";
 import { BigNumber } from "ethers";
+import { Reload } from "@rsuite/icons";
 
 const UserRetableView_: NextComponentType = ({
   purpose,
@@ -150,10 +153,10 @@ const Staking: NextComponentType = () => {
 const Mint: NextComponentType = () => {
   const networkProvider = React.useContext(NetworkContext);
 
-  console.log(
-    "TradeThePair Component, current tework Procider: ",
-    networkProvider
-  );
+  // console.log(
+  //   "TradeThePair Component, current tework Procider: ",
+  //   networkProvider
+  // );
 
   const toaster = useToaster();
 
@@ -168,19 +171,32 @@ const Mint: NextComponentType = () => {
     rusdBalance ? rusdBalance : new Amount(BigNumber.from(0), 18)
   );
 
-  const setNewWethAllowanceCallback =
-    networkProvider.getNewWethAllowanceCallback(
-      wethValue,
-      getStateHandlingCallback(toaster)
-    );
-  const mintCallback = networkProvider.getMintCallback(
-    rusdValue,
-    wethValue,
-    getStateHandlingCallback(toaster)
-  );
+  // const setNewWethAllowanceCallback =
+  //   networkProvider.getNewWethAllowanceCallback(
+  //     wethValue,
+  //     getStateHandlingCallback(toaster)
+  //   );
+  // const mintCallback = networkProvider.getMintCallback(
+  //   rusdValue,
+  //   wethValue,
+  //   getStateHandlingCallback(toaster)
+  // );
 
   return (
-    <Panel bordered shaded header="Mint rUSD">
+    <Panel
+      bordered
+      shaded
+      // header="Mint rUSD"
+      header={
+        <Stack justifyContent="space-between">
+          <span>Report Title</span>
+          <ButtonGroup>
+            {/* <Button active>Day</Button> */}
+            <IconButton icon={<Reload />}> Reload </IconButton>
+          </ButtonGroup>
+        </Stack>
+      }
+    >
       <p>
         In molestie sem est, vitae blandit justo vestibulum in. Quisque lacinia
         quam et erat pellentesque iaculis. Cras fermentum sagittis nisl, vel
@@ -199,9 +215,7 @@ const Mint: NextComponentType = () => {
             onClick={() =>
               setRusdValue(
                 new Amount(
-                  rusdValue.amount.sub(
-                    BigNumber.from(10).pow(rusdValue.decimals)
-                  ),
+                  rusdValue.amount.sub(BigNumber.from(10).pow(18)),
                   rusdValue.decimals
                 )
               )
@@ -217,7 +231,7 @@ const Mint: NextComponentType = () => {
               setRusdValue(
                 Amount.fromString(
                   typeof val == "string" ? val : val.toString(),
-                  rusdValue.decimals
+                  18
                 )
               )
             }
@@ -225,12 +239,7 @@ const Mint: NextComponentType = () => {
           <InputGroup.Button
             onClick={() =>
               setRusdValue(
-                new Amount(
-                  rusdValue.amount.add(
-                    BigNumber.from(10).pow(rusdValue.decimals)
-                  ),
-                  rusdValue.decimals
-                )
+                new Amount(rusdValue.amount.add(BigNumber.from(10).pow(18)), 18)
               )
             }
           >
@@ -241,7 +250,7 @@ const Mint: NextComponentType = () => {
       </Form.Group>
       <br />
       <Form.Group controlId="_">
-        <Form.ControlLabel>WETH amount</Form.ControlLabel>
+        <Form.ControlLabel>WTRH amount</Form.ControlLabel>
         <InputGroup style={{ marginTop: 5, marginBottom: 5 }}>
           <InputGroup.Button
             onClick={() =>
@@ -310,7 +319,12 @@ const Mint: NextComponentType = () => {
             parseFloat(wethValue?.toHumanString(18))
           }
           style={{ marginBottom: 7, borderWidth: 2 }}
-          onClick={async () => setNewWethAllowanceCallback()}
+          onClick={async () =>
+            networkProvider.getNewWethAllowanceCallback(
+              wethValue,
+              getStateHandlingCallback(toaster)
+            )
+          }
         >
           <b>Approve</b>
         </Button>
@@ -321,7 +335,13 @@ const Mint: NextComponentType = () => {
             parseFloat(wethValue?.toHumanString(18))
           }
           style={{ marginBottom: 7, borderWidth: 2 }}
-          onClick={async () => mintCallback()}
+          onClick={async () =>
+            networkProvider.getMintCallback(
+              rusdValue,
+              wethValue,
+              getStateHandlingCallback(toaster)
+            )
+          }
         >
           <b>Mint</b>
         </Button>

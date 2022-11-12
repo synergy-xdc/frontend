@@ -48,60 +48,61 @@ const TradeThePair: NextComponentType = () => {
   const rusdBalance = networkProvider.getRusdBalance();
 
   return (
-    <Panel bordered shaded header="Trade the Synth">
-      <div style={{ textAlign: "left" }}>
-        <Form.Group controlId="_">
-          <Form.ControlLabel>Invest rUSD amount</Form.ControlLabel>
-          <InputGroup style={{ marginTop: 5, marginBottom: 5 }}>
-            <InputGroup.Button
-              onClick={() => setPositionRusdValue(positionRusdValue + 10)}
-            >
-              -
-            </InputGroup.Button>
-            <InputNumber
-              className="no-arrows-input-number"
-              value={positionRusdValue}
-              onChange={
-                (val) => setPositionRusdValue(parseInt(val)) // @ts-ignore
-              }
-            />
-            <InputGroup.Button
-              onClick={() => setPositionRusdValue(positionRusdValue + 10)}
-            >
-              +
-            </InputGroup.Button>
-          </InputGroup>
+    <></>
+    // <Panel bordered shaded header="Trade the Synth">
+    //   <div style={{ textAlign: "left" }}>
+    //     <Form.Group controlId="_">
+    //       <Form.ControlLabel>Invest rUSD amount</Form.ControlLabel>
+    //       <InputGroup style={{ marginTop: 5, marginBottom: 5 }}>
+    //         <InputGroup.Button
+    //           onClick={() => setPositionRusdValue(positionRusdValue + 10)}
+    //         >
+    //           -
+    //         </InputGroup.Button>
+    //         <InputNumber
+    //           className="no-arrows-input-number"
+    //           value={positionRusdValue}
+    //           onChange={
+    //             (val) => setPositionRusdValue(parseInt(val)) // @ts-ignore
+    //           }
+    //         />
+    //         <InputGroup.Button
+    //           onClick={() => setPositionRusdValue(positionRusdValue + 10)}
+    //         >
+    //           +
+    //         </InputGroup.Button>
+    //       </InputGroup>
 
-          <Form.HelpText>
-            Balance: {rusdBalance?.toHumanString(4)}
-          </Form.HelpText>
-        </Form.Group>
-        <ButtonGroup style={{ marginTop: 12 }} justified>
-          <Button
-            style={{
-              borderColor: "#82363a",
-              backgroundColor: "#f33645",
-              color: "#FFF",
-            }}
-            appearance="primary"
-            color="red"
-          >
-            <b>Short</b>
-          </Button>
-          <Button
-            style={{
-              borderColor: "#1d5f5e",
-              backgroundColor: "#089a81",
-              color: "#FFF",
-            }}
-            appearance="primary"
-            color="green"
-          >
-            <b>Long</b>
-          </Button>
-        </ButtonGroup>
-      </div>
-    </Panel>
+    //       <Form.HelpText>
+    //         Balance: {rusdBalance?.toHumanString(4)}
+    //       </Form.HelpText>
+    //     </Form.Group>
+    //     <ButtonGroup style={{ marginTop: 12 }} justified>
+    //       <Button
+    //         style={{
+    //           borderColor: "#82363a",
+    //           backgroundColor: "#f33645",
+    //           color: "#FFF",
+    //         }}
+    //         appearance="primary"
+    //         color="red"
+    //       >
+    //         <b>Short</b>
+    //       </Button>
+    //       <Button
+    //         style={{
+    //           borderColor: "#1d5f5e",
+    //           backgroundColor: "#089a81",
+    //           color: "#FFF",
+    //         }}
+    //         appearance="primary"
+    //         color="green"
+    //       >
+    //         <b>Long</b>
+    //       </Button>
+    //     </ButtonGroup>
+    //   </div>
+    // </Panel>
   );
 };
 

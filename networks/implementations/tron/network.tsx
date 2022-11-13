@@ -1,5 +1,5 @@
 
-import BaseNetwork, { Synth, WalletPrimaryData } from "@/networks/base/network";
+import BaseNetwork, { ContractUserInsurance, FrontendUserInsurance, Synth, WalletPrimaryData } from "@/networks/base/network";
 import Amount from "@/networks/base/amount";
 import TXState from "@/networks/base/txstate";
 
@@ -677,35 +677,24 @@ class TronNetwork extends BaseNetwork {
     stake();
   }
 
-  getUserInssurances(): Array<any> {
+  getUserInssurances(): FrontendUserInsurance[] {
     const selfAddress = useSelfTronAddress();
-    const extension = getExtension();
 
-    const [userInsurances, setUserInsurances] = React.useState([]);
+    const [userInsurances, setUserInsurances] = React.useState<FrontendUserInsurance[]>([]);
 
-    // https://beta.reactjs.org/learn/updating-arrays-in-state
-    // В арреи можно просто пушить
-    // реакт сообразит
+    const insurance: ContractUserInsurance = useTronContractCall(
+        InsuranceTRONAddress,
+        InsuranceABI,
+        "userInsurances",
+        [selfAddress?.base58, userInsurances.length]
+    );
 
-    // while (true) {
-    //   const insurance: any = useTronContractCall(
-    //     InsuranceTRONAddress,
-    //     InsuranceABI,
-    //     "userInsurances",
-    //     [selfAddress?.base58, userInsurances.length]
-    //   );
+    if (insurance !== undefined) {
+        userInsurances.push({
 
-    //   if (insurance !== undefined) {
-    //     setUserInsurances([...userInsurances, insurance]);
-    //   } else {
-    //     break
-    //   }
-    // }
-
-    // if (userInsurances !== undefined) {
-    //   return userInsurances;
-    // }
-    return undefined;
+        })
+    }
+    return userInsurances;
 
     // return [
     //   {

@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 
 import Amount from "@/networks/base/amount";
 import TXState from "@/networks/base/txstate";
+import { BigNumber } from "ethers";
 
 
 export interface WalletPrimaryData {
@@ -16,6 +17,32 @@ export interface Synth {
     symbol: string,
     trading_view_symbol: string
 }
+
+export interface ContractUserInsurance {
+    user: string;
+    stakedRaw: BigNumber;
+    repaidRaw: BigNumber;
+    startTime: BigNumber;
+    lockTime: BigNumber;
+}
+
+export interface FrontendUserInsurance {
+    id: string,
+    rawLocked: string,
+    lockedAt: string,
+    availableAt: string,
+    rawRepaid: string,
+}
+
+// return [
+//   {
+//     id: 123123,
+//     raw_locked: 10,
+//     locked_at: 2342134123123,
+//     available_at: 1212312312312,
+//     raw_repaid: 5,
+//   },
+// ];
 
 abstract class BaseNetwork {
     abstract showWallet(): WalletPrimaryData | undefined
@@ -37,7 +64,7 @@ abstract class BaseNetwork {
         tx_state_changes_callback: (state: TXState) => void,
     ): Function
     abstract getBurnRusdCallback(amount: Amount): Function
-    abstract getUserInssurances(): Array<any>
+    abstract getUserInssurances(): Array<FrontendUserInsurance>
 }
 
 

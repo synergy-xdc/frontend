@@ -3,7 +3,7 @@ import BaseNetwork, {
   Synth,
   TXState,
   WalletPrimaryData,
-} from "@/networks/base";
+} from "@/networks/base_old";
 import {
   ConnectButton,
   useAccount,

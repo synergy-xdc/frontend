@@ -35,7 +35,7 @@ import {
 } from "@web3modal/react";
 import AVAILABLE_NETWORKS, { NetworkContext } from "@/networks/all";
 import Icon from "react-crypto-icons";
-import { WalletPrimaryData } from "@/networks/base";
+import { WalletPrimaryData } from "@/networks/base_old";
 
 const homeLabel = "home";
 const tradingLabel = "trading";
@@ -56,15 +56,6 @@ const NavItemStyle = {
 };
 
 const ConnectedWallet: NextComponentType = () => {
-  const config = {
-    projectId: "12647116f49027a9b16f4c0598eb6d74",
-    theme: "dark",
-    accentColor: "purple",
-    ethereum: {
-      appName: "web3Modal",
-      autoConnect: true,
-    },
-  };
   const [network, setNetwork] = React.useState<string>("tron");
 
   const showWallet = () => {

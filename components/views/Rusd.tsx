@@ -14,6 +14,9 @@ import {
   useToaster,
   Stack,
   IconButton,
+  DatePicker,
+  Table,
+  SelectPicker
 } from "rsuite";
 
 import {
@@ -21,7 +24,7 @@ import {
   WalletAskConfirmTX,
   WalletTXSuccessfullyBroadcasted,
 } from "@/components/WalletNotification";
-import { Amount, TXState } from "@/networks/base";
+import { Amount, TXState } from "@/networks/base_old";
 import { BigNumber } from "ethers";
 import { Reload } from "@rsuite/icons";
 
@@ -93,7 +96,14 @@ const UserRelatebleView: NextComponentType = () => {
 };
 
 const Staking: NextComponentType = () => {
-  const [rawValue, setRawValue] = React.useState<number>(100);
+  // const [rawValue, setRawValue] = React.useState<number>(100);
+  const networkProvider = useContext(NetworkContext);
+  const rawBalance = networkProvider.getRawBalance();
+  const [rawValue, setRawValue] = React.useState<Amount>(
+    rawBalance ? rawBalance : new Amount(BigNumber.from(0), 18)
+  );
+
+  const [unlockDate, setUnlockDate] = React.useState<Date | null>(new Date());
 
   return (
     <Panel bordered shaded header="Staking">
@@ -113,39 +123,145 @@ const Staking: NextComponentType = () => {
       <Form.Group controlId="_">
         <Form.ControlLabel>RAW amount</Form.ControlLabel>
         <InputGroup style={{ marginTop: 5, marginBottom: 5 }}>
-          <InputGroup.Button onClick={() => setRawValue(rawValue + 10)}>
+          <InputGroup.Button
+            onClick={() =>
+              setRawValue(
+                new Amount(
+                  rawValue.amount.sub(
+                    BigNumber.from(10).pow(rawValue.decimals + 1)
+                  ),
+                  rawValue.decimals
+                )
+              )
+            }
+          >
             -
           </InputGroup.Button>
           <InputNumber
             className="no-arrows-input-number"
-            value={rawValue}
-            onChange={
-              (val) => setRawValue(parseInt(val)) // @ts-ignore
+            // step={10.1}
+            value={rawValue.toHumanString(2)}
+            onChange={(val) =>
+              setRawValue(
+                Amount.fromString(
+                  typeof val == "string" ? val : val.toString(),
+                  rawValue.decimals
+                )
+              )
             }
           />
-          <InputGroup.Button onClick={() => setRawValue(rawValue + 10)}>
+          <InputGroup.Button
+            onClick={() =>
+              setRawValue(
+                new Amount(
+                  rawValue.amount.add(
+                    BigNumber.from(10).pow(rawValue.decimals + 1)
+                  ),
+                  rawValue.decimals
+                )
+              )
+            }
+          >
             +
           </InputGroup.Button>
         </InputGroup>
-        {/* <Form.HelpText>Balance: 2343.56</Form.HelpText> */}
+        <Form.HelpText>Balance: {rawBalance?.toHumanString(4)}</Form.HelpText>
       </Form.Group>
       <br />
-      <ButtonGroup justified>
-        <Button
-          style={{ borderColor: "#089a81", color: "#089a81", borderWidth: 2 }}
-          appearance="ghost"
-          color="green"
+      <Form.Group controlId="_">
+        <Form.ControlLabel>Unlock date</Form.ControlLabel>
+        <DatePicker
+          style={{ marginTop: 5, marginBottom: 5 }}
+          format="yyyy-MM-dd"
+          ranges={[]}
+          block
+          onChange={setUnlockDate}
+        />
+        <Form.HelpText>RAW insurance: TODO</Form.HelpText>
+      </Form.Group>
+      <br />
+      <Button
+        style={{ backgroundColor: "#089a81", borderWidth: 2 }}
+        appearance="primary"
+        color="green"
+        block
+        onClick={async () =>
+          networkProvider.getStakeCallback(
+            rawValue,
+            unlockDate
+          )
+        }
+      >
+        <b>Stake</b>
+      </Button>
+      <hr />
+      <Table
+        rowHeight={60}
+        autoHeight
+        style={{ borderRadius: 10 }}
+        cellBordered
+        virtualized
+        data={[
+          {
+            id: 123123,
+            raw_locked: 10,
+            locked_at: 2342134123123,
+            available_at: 1212312312312,
+            raw_repaid: 5,
+          },
+        ]}
+        renderEmpty={() => (
+          <span style={{ alignContent: "center" }}>
+            <br />
+            No any insurances
+          </span>
+        )}
+      >
+        <Table.Column
+          verticalAlign="middle"
+          width={170}
+          align="left"
+          fixed
+          flexGrow={1}
         >
-          <b>Stake</b>
-        </Button>
-        <Button
-          style={{ borderColor: "#f33645", color: "#f33645", borderWidth: 2 }}
-          appearance="ghost"
-          color="red"
-        >
-          <b>Unstake</b>
-        </Button>
-      </ButtonGroup>
+          <Table.HeaderCell>ID</Table.HeaderCell>
+          <Table.Cell dataKey="id" />
+        </Table.Column>
+
+        <Table.Column verticalAlign="middle" width={100} flexGrow={1}>
+          <Table.HeaderCell>RAW Locked</Table.HeaderCell>
+          <Table.Cell dataKey="raw_locked" />
+        </Table.Column>
+
+        <Table.Column verticalAlign="middle" width={200} flexGrow={1}>
+          <Table.HeaderCell>Locked At</Table.HeaderCell>
+          <Table.Cell dataKey="locked_at" />
+        </Table.Column>
+
+        <Table.Column verticalAlign="middle" width={150} flexGrow={1}>
+          <Table.HeaderCell>Available At</Table.HeaderCell>
+          <Table.Cell dataKey="available_at" />
+        </Table.Column>
+
+        <Table.Column verticalAlign="middle" width={150} flexGrow={1}>
+          <Table.HeaderCell>RAW Repaid</Table.HeaderCell>
+          <Table.Cell dataKey="raw_repaid" />
+        </Table.Column>
+
+        <Table.Column verticalAlign="middle" width={150} flexGrow={1}>
+          <Table.HeaderCell>#</Table.HeaderCell>
+          <Table.Cell dataKey="unstake">
+            <Button
+              style={{ borderWidth: 2 }}
+              color="red"
+              appearance="ghost"
+              block
+            >
+              Unstake
+            </Button>
+          </Table.Cell>
+        </Table.Column>
+      </Table>
     </Panel>
   );
 };
@@ -226,7 +342,7 @@ const Mint: NextComponentType = () => {
           <InputNumber
             className="no-arrows-input-number"
             step={0.1}
-            value={rusdValue.toHumanString(2)}
+            value={rusdValue?.toHumanString(2)}
             onChange={(val) =>
               setRusdValue(
                 Amount.fromString(
@@ -250,7 +366,7 @@ const Mint: NextComponentType = () => {
       </Form.Group>
       <br />
       <Form.Group controlId="_">
-        <Form.ControlLabel>WTRH amount</Form.ControlLabel>
+        <Form.ControlLabel>WTRX amount</Form.ControlLabel>
         <InputGroup style={{ marginTop: 5, marginBottom: 5 }}>
           <InputGroup.Button
             onClick={() =>
@@ -352,12 +468,20 @@ const Mint: NextComponentType = () => {
 
 const Burn: NextComponentType = () => {
   const networkProvider = React.useContext(NetworkContext);
+  const rusdBalance = networkProvider.getRusdBalance();
+  const gasRokenBalance = networkProvider.getWethBalance();
   const toaster = useToaster();
 
-  const rusdBalance = networkProvider.getRusdBalance();
+
   const [rusdValue, setRusdValue] = React.useState<Amount>(
     rusdBalance ? rusdBalance : new Amount(BigNumber.from(0), 18)
   );
+  const [wrappedGasTokenValue, setWrappedGasTokenValue] = React.useState<Amount>(
+    gasRokenBalance ? gasRokenBalance : new Amount(BigNumber.from(0), 18)
+  );
+
+  const [insuranceId, setInsuranceId] = React.useState<string>("0");
+
 
   return (
     <Panel bordered shaded header="Burn rUSD">
@@ -420,6 +544,25 @@ const Burn: NextComponentType = () => {
         <Form.HelpText>Balance: TODO</Form.HelpText>
         <Form.HelpText>New balance: TODO</Form.HelpText>
       </Form.Group>
+      <br/>
+      <Form.Group controlId="_">
+        <Form.ControlLabel>Insurance rUSD amount</Form.ControlLabel>
+        <div style={{ marginTop: 5, marginBottom: 5 }}>
+          <SelectPicker
+            label="Insurance"
+            data={[
+              {
+                "label": "Empty",
+                "value": "0"
+              }
+            ]}
+            onChange={setInsuranceId}
+            cleanable={false}
+            block
+            defaultValue={"0"}
+          />
+        </div>
+      </Form.Group>
       <br />
       <Button
         color="orange"
@@ -432,24 +575,59 @@ const Burn: NextComponentType = () => {
       </Button>
       <hr />
       <Form.Group controlId="_">
-        <Form.ControlLabel>rUSD amount</Form.ControlLabel>
+        <Form.ControlLabel>Unlock WETH</Form.ControlLabel>
         <InputGroup style={{ marginTop: 5, marginBottom: 5 }}>
-          <InputGroup.Button onClick={() => setRusdValue(rusdValue + 10)}>
+          <InputGroup.Button
+            onClick={() =>
+              setWrappedGasTokenValue(
+                new Amount(
+                  wrappedGasTokenValue.amount.sub(
+                    BigNumber.from(10).pow(wrappedGasTokenValue.decimals - 1)
+                  ),
+                  wrappedGasTokenValue.decimals
+                )
+              )
+            }
+          >
             -
           </InputGroup.Button>
           <InputNumber
             className="no-arrows-input-number"
-            value={rusdValue}
-            onChange={
-              (val) => setRusdValue(parseInt(val)) // @ts-ignore
+            step={0.1}
+            value={wrappedGasTokenValue.toHumanString(2)}
+            onChange={(val) =>
+              setWrappedGasTokenValue(
+                Amount.fromString(
+                  typeof val == "string" ? val : val.toString(),
+                  wrappedGasTokenValue.decimals
+                )
+              )
             }
           />
-          <InputGroup.Button onClick={() => setRusdValue(rusdValue + 10)}>
+          <InputGroup.Button
+            onClick={() =>
+              setWrappedGasTokenValue(
+                new Amount(
+                  wrappedGasTokenValue.amount.add(
+                    BigNumber.from(10).pow(wrappedGasTokenValue.decimals - 1)
+                  ),
+                  wrappedGasTokenValue.decimals
+                )
+              )
+            }
+          >
             +
           </InputGroup.Button>
         </InputGroup>
-        <Form.HelpText>Current balance: TODO</Form.HelpText>
-        <Form.HelpText>New balance: TODO</Form.HelpText>
+        <Form.HelpText>
+          Locked Amount: TODO
+        </Form.HelpText>
+        <Form.HelpText>
+          Current balance: TODO
+        </Form.HelpText>
+        <Form.HelpText>
+          New balance: TODO
+        </Form.HelpText>
       </Form.Group>
       <br />
       <Button
@@ -473,10 +651,7 @@ const RusdView: NextComponentType = () => {
   return (
     <>
       <FlexboxGrid justify="space-around">
-        <FlexboxGrid.Item colspan={11}>
-          <UserRelatebleView />
-        </FlexboxGrid.Item>
-        <FlexboxGrid.Item colspan={11}>
+        <FlexboxGrid.Item colspan={23}>
           <Staking />
         </FlexboxGrid.Item>
       </FlexboxGrid>

@@ -1,48 +1,59 @@
-import BaseNetwork, {
-  Amount,
-  Synth,
-  TXState,
-  WalletPrimaryData,
-} from "@/networks/base_old";
+
+import BaseNetwork, { Synth, WalletPrimaryData } from "@/networks/base/network";
+import Amount from "@/networks/base/amount";
+import TXState from "@/networks/base/txstate";
+
 import { ReactNode, useEffect, useState } from "react";
 import { BigNumber, utils } from "ethers";
 import React from "react";
 import { Button } from "rsuite";
 import {
-  triggerSmartContract,
-  sign,
-  sendRawTransaction,
-  // MAX_UINT256,
-} from "./utils/tron-utils";
-// import TronWeb from "tronweb";
+    triggerSmartContract,
+    sign,
+    sendRawTransaction,
+    // MAX_UINT256,
+} from "@/networks/utils/tron-utils";
+import {
+    getExtension,
+    useSelfTronAddress,
+    useSelfTronBalance,
+    useTronContractCall
+} from "@/networks/implementations/tron/states";
+import RawABI from "@/abi/RAW.json";
+import RusdABI from "@/abi/RUSD.json";
+import SynergyABI from "@/abi/Synergy.json";
+import OracleABI from "@/abi/Oracle.json";
+import WethABI from "@/abi/WETH.json";
 
+import type { TronWeb } from "tronweb-typings";
 
 const AbiCoder = utils.AbiCoder;
-const ADDRESS_PREFIX_REGEX = /^(41)/;
 const ADDRESS_PREFIX = "41";
 
-declare global {
-  interface Window {
-    tronWeb?: TronWeb;
-  }
-}
+// // const foo = new TronWeb();
+// declare global {
+//   interface Window {
+//     tronWeb?: (TronWeb & typeof TronWeb) | undefined;
+//   }
+// }
 
-const SynergyAddress: string = "0x2f6F4493bb82f00Ed346De9353EF22cA277b7680";
+// const SynergyAddress: string = "0x2f6F4493bb82f00Ed346De9353EF22cA277b7680";
 const SynergyTRONAddress: string = "TQkDaoJsFuYpj8ZZvhaWdSrPTWUNc2ByQ1";
+const InsuranceTRONAddress: string = "TNAcvrtUuVqMaUY5UJC86EbCjsGAx2zUZ6";
 
 const AvailableSynth: Synth[] = [
-  {
-    address: "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2",
-    full_name: "Gold",
-    symbol: "GOLD",
-    trading_view_symbol: "GOLD",
-  },
-  {
-    address: "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2",
-    full_name: "Silver",
-    symbol: "SILVER",
-    trading_view_symbol: "SILVER",
-  },
+    {
+        address: "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2",
+        full_name: "Gold",
+        symbol: "GOLD",
+        trading_view_symbol: "GOLD",
+    },
+    {
+        address: "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2",
+        full_name: "Silver",
+        symbol: "SILVER",
+        trading_view_symbol: "SILVER",
+    },
 ];
 
 class TronNetwork extends BaseNetwork {
@@ -56,54 +67,29 @@ class TronNetwork extends BaseNetwork {
       <Button
         style={{ backgroundColor: "linear-gradient(transparent, #089a81)" }}
         appearance="primary"
-        onClick={this.getTronweb}
       >
         Connect Wallet
       </Button>
     );
   }
 
-  getTronweb() {
-    var obj = setInterval(async () => {
-      if (window.tronWeb && !window.tronWeb.defaultAddress.base58) {
-        clearInterval(obj);
-        alert("TronLink extension is installed but user is not logged it");
-      }
+  showWallet(): WalletPrimaryData | undefined {
+    const balance = useSelfTronBalance();
+    const selfAddress = useSelfTronAddress();
 
-    //   if (window.tronWeb && window.tronWeb.defaultAddress.base58) {
-    //     clearInterval(obj);
-    //     const tronAddress = window.tronWeb.defaultAddress.base58;
-
-    //     window.localStorage.setItem("tronAddress", tronAddress);
-    //     alert(`set localStorage item tron_address: ${tronAddress}`);
-    //   }
-    }, 10);
-  }
-
-  showWallet(): WalletPrimaryData | null {
-    const [wallet, setWalet] = useState(null);
-
-    useEffect(() => {
-      var obj = setInterval(async () => {
-        const tronWeb = window.tronWeb;
-
-        if (tronWeb && tronWeb.defaultAddress.base58 && tronWeb.ready) {
-          let defaultAccount = tronWeb.defaultAddress.base58;
-          tronWeb.trx.getBalance(defaultAccount).then((data: any) => {
-            const wallet: any = {
-              address: defaultAccount,
-              network_currency_symbol: "TRX",
-              network_currency_amount: data,
-            };
-
-            setWalet(wallet);
-          });
-
-          clearInterval(obj);
-        }
-      }, 10);
-    });
-    return wallet;
+    if (
+      balance === undefined ||
+      selfAddress === undefined ||
+      !selfAddress.base58
+    ) {
+      return undefined;
+    } else {
+      return {
+        address: selfAddress?.base58,
+        network_currency_symbol: "TRX",
+        network_currency_amount: balance.toHumanString(3),
+      };
+    }
   }
 
   async decodeParams(types: any, output: any, ignoreMethodHash: any) {
@@ -130,73 +116,38 @@ class TronNetwork extends BaseNetwork {
   }
 
   getRusdBalance(): Amount | undefined {
+    const selfAddress = useSelfTronAddress();
+    const extension = getExtension();
+
+    const rusdAddress: string | undefined = useTronContractCall(
+      SynergyTRONAddress,
+      SynergyABI,
+      "rUsd"
+    );
+    const rusdBalance: BigNumber | undefined = useTronContractCall(
+      rusdAddress,
+      RusdABI,
+      "balanceOf",
+      [selfAddress?.base58]
+    );
+
+    if (rusdBalance !== undefined) {
+      return new Amount(rusdBalance, 18);
+    }
+    return undefined;
+  }
+
+  //GET RAW BALANCE
+
+  getRawBalance(): Amount | undefined {
     const [amount, setAmount] = useState(undefined);
 
-    // if (typeof window === "undefined") return undefined;
     useEffect(() => {
       const getAmount = async () => {
         const HexSynergyTRONAddress =
           window.tronWeb.address.toHex(SynergyTRONAddress);
         const HexUserAddress = window.tronWeb.address.toHex(
           window.tronWeb.defaultAddress.base58
-        );
-
-          console.log(window.tronWeb.defaultAddress.base58);
-
-        const rUsdTransaction =
-          await window.tronWeb.transactionBuilder.triggerConstantContract(
-            HexSynergyTRONAddress,
-            "rUsd()",
-            {},
-            [],
-            HexUserAddress
-          );
-        const rUsdTransactionResult = rUsdTransaction["constant_result"][0];
-        const rUsdTransactionResultDecoded = await this.decodeParams(
-          ["address"],
-          "0x" + rUsdTransactionResult,
-          false
-        );
-        const balanceOfTransaction =
-          await window.tronWeb.transactionBuilder.triggerConstantContract(
-            rUsdTransactionResultDecoded[0],
-            "balanceOf(address)",
-            {},
-            [
-              {
-                type: "address",
-                value: HexUserAddress,
-              },
-            ],
-            HexUserAddress
-          );
-
-        const balanceOfTransactionResult =
-          balanceOfTransaction["constant_result"][0];
-        const balanceOfTransactionResultDecoded = await this.decodeParams(
-          ["uint256"],
-          "0x" + balanceOfTransactionResult,
-          false
-        );
-        const amount: any = new Amount(
-          balanceOfTransactionResultDecoded[0],
-          18
-        );
-        setAmount(amount);
-      };
-      getAmount();
-    }, []);
-    return amount;
-  }
-
-  getRawBalance(): Amount | undefined {
-    const [amount, setAmount] = useState(undefined);
-    useEffect(() => {
-      const getAmount = async () => {
-        const HexSynergyTRONAddress =
-            window.tronWeb.address.toHex(SynergyTRONAddress);
-        const HexUserAddress = window.tronWeb.address.toHex(
-            window.tronWeb.defaultAddress.base58
         );
 
         console.log(HexUserAddress);
@@ -248,6 +199,7 @@ class TronNetwork extends BaseNetwork {
 
   getRawPrice(): Amount | undefined {
     const [amount, setAmount] = useState(undefined);
+
     useEffect(() => {
       const getAmount = async () => {
         const HexSynergyTRONAddress =
@@ -684,6 +636,45 @@ class TronNetwork extends BaseNetwork {
       );
     };
     burn();
+  }
+
+  getStakeCallback(amount: Amount, date: Date) {
+    const today: Date = new Date();
+
+    // to do something smartet
+    // if diff < 5 hours - 0
+
+    let lockTime = (date - today) / 1000;
+    if (lockTime / 60 < 5) {
+      lockTime = 0;
+    }
+
+    const stake = async () => {
+      const HexInsuranceTRONAddress =
+        window.tronWeb.address.toHex(InsuranceTRONAddress);
+      const HexUserAddress = window.tronWeb.address.toHex(
+        window.tronWeb.defaultAddress.base58
+      );
+      const stakeCall = await triggerSmartContract(
+        HexSynergyTRONAddress,
+        "mint(uint256,uint256)",
+        {},
+        [
+          {
+            type: "uint256",
+            value: amountToMint.amount,
+          },
+          {
+            type: "uint256",
+            value: amountToPledge.amount,
+          },
+        ]
+      );
+      const signedTransaction = await sign(mintSign);
+      const result = await sendRawTransaction(signedTransaction);
+    };
+
+    stake();
   }
 
   _defineStateChangesCallback(

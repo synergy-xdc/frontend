@@ -1,6 +1,6 @@
 import React, { Context } from "react";
-import BaseNetwork from "./base";
-import TronNetwork from "./tron";
+import BaseNetwork from "@/networks/base/network";
+import TronNetwork from "@/networks/implementations/tron/network";
 
 interface AvailableNetworks {
     [key: string]: BaseNetwork;

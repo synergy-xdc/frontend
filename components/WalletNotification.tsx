@@ -1,5 +1,5 @@
-import { TXState } from "@/networks/base";
-import { Notification, useToaster } from "rsuite";
+import { TXState } from "@/networks/base_old";
+import { Notification, useToaster, useToaster } from "rsuite";
 
 
 const WalletNotification = ({type, header, content}) => (
@@ -40,7 +40,7 @@ export const WalletTXSuccessfullyBroadcasted = ({...props}) => {
 }
 
 
-export const getStateHandlingCallback = (toaster) => {
+export const getStateHandlingCallback = (toaster: ReturnType<typeof useToaster>) => {
     return (state: TXState) => {
         switch (state) {
             case TXState.AwaitWalletConfirmation:

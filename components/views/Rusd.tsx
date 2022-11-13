@@ -102,8 +102,11 @@ const Staking: NextComponentType = () => {
   const [rawValue, setRawValue] = React.useState<Amount>(
     rawBalance ? rawBalance : new Amount(BigNumber.from(0), 18)
   );
+  const [insurancesList, setInsurancesList] = React.useState(networkProvider.getUserInssurances());
 
-  const [unlockDate, setUnlockDate] = React.useState<Date | null>(new Date());
+  const default_date: Date = new Date(new Date().setMonth(new Date().getMonth() + 2))
+
+  const [unlockDate, setUnlockDate] = React.useState<Date | null>(default_date);
 
   return (
     <Panel bordered shaded header="Staking">
@@ -201,15 +204,7 @@ const Staking: NextComponentType = () => {
         style={{ borderRadius: 10 }}
         cellBordered
         virtualized
-        data={[
-          {
-            id: 123123,
-            raw_locked: 10,
-            locked_at: 2342134123123,
-            available_at: 1212312312312,
-            raw_repaid: 5,
-          },
-        ]}
+        data={insurancesList}
         renderEmpty={() => (
           <span style={{ alignContent: "center" }}>
             <br />
@@ -292,11 +287,11 @@ const Mint: NextComponentType = () => {
   //     wethValue,
   //     getStateHandlingCallback(toaster)
   //   );
-  // const mintCallback = networkProvider.getMintCallback(
-  //   rusdValue,
-  //   wethValue,
-  //   getStateHandlingCallback(toaster)
-  // );
+  const mintCallback = networkProvider.getMintCallback(
+    rusdValue,
+    wethValue,
+    getStateHandlingCallback(toaster)
+  );
 
   return (
     <Panel
@@ -451,12 +446,9 @@ const Mint: NextComponentType = () => {
             parseFloat(wethValue?.toHumanString(18))
           }
           style={{ marginBottom: 7, borderWidth: 2 }}
-          onClick={async () =>
-            networkProvider.getMintCallback(
-              rusdValue,
-              wethValue,
-              getStateHandlingCallback(toaster)
-            )
+          onClick={async () => {
+                console.log(123123); mintCallback()
+            }
           }
         >
           <b>Mint</b>

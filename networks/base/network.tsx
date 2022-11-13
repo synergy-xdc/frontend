@@ -37,6 +37,7 @@ abstract class BaseNetwork {
         tx_state_changes_callback: (state: TXState) => void,
     ): Function
     abstract getBurnRusdCallback(amount: Amount): Function
+    abstract getUserInssurances(): Array<any>
 }
 
 

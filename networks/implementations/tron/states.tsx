@@ -32,23 +32,6 @@ export const useTronContractCall = (
     const [isFirstFetch, setIsFirstFetch] = React.useState<boolean>(true);
     const extension = getExtension();
 
-    // const interval = setInterval(async () => {
-    //     try {
-    //         console.log(args);
-    //         const contract = await extension?.contract(abi).at(address);
-    //         setResponse(await contract[functionName](...args).call());
-    //         clearInterval(interval)
-    //     } catch (err) {}
-    // }, 3000)
-
-    // if (address === undefined) {
-    //     return undefined;
-    // }
-    // for (const arg of args) {
-    //     if (arg === undefined) {
-    //         return response;
-    //     }
-    // }
     if (address !== undefined && isFirstFetch) {
         extension?.contract(abi).at(address).then((contract: any) => {
             contract[functionName](...args).call().then((result: any) => {
@@ -59,6 +42,46 @@ export const useTronContractCall = (
     }
 
     return response;
+}
+
+export const useTronContractWrite = (
+    address: string | undefined,
+    abi: any,
+    functionName: string,
+    cbBefore: Function,
+    cbAfter: Function,
+    args: any[] = [],
+): () => void => {
+    const extension = getExtension();
+
+    return () => {
+        console.log("trigger wallet", args);
+        cbBefore()
+        if (address !== undefined) {
+            extension?.contract(abi).at(address).then((contract: any) => {
+                contract[functionName](...args).send({
+                    feeLimit: 100_000_000,
+                    callValue: 0,
+                    shouldPollResponse: false
+                }).then((result: any) => {
+                    console.log("write", result);
+                    cbAfter()
+                }).catch((err: any) => console.log(err))
+            }).catch((err: any) => console.log(err));
+        }
+    }
+}
+
+export const useTronEvents  = (
+    address: string | undefined,
+    abi: any,
+    eventName: string,
+    cb: (err: any, event: any) => void
+): void => {
+    const extension = getExtension();
+    extension?.contract(abi).at(address).then((contract: any) => {
+        contract[eventName].watch(cb);
+    }).catch((err: any) => console.log(err));
 }
 
 export const useSelfTronAddress = (): {

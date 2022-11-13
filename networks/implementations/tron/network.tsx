@@ -17,13 +17,16 @@ import {
     getExtension,
     useSelfTronAddress,
     useSelfTronBalance,
-    useTronContractCall
+    useTronContractCall,
+    useTronContractWrite,
+    useTronEvents
 } from "@/networks/implementations/tron/states";
 import RawABI from "@/abi/RAW.json";
 import RusdABI from "@/abi/RUSD.json";
 import SynergyABI from "@/abi/Synergy.json";
 import OracleABI from "@/abi/Oracle.json";
 import WethABI from "@/abi/WETH.json";
+import InsuranceABI from "@/abi/Insurance.json";
 
 import type { TronWeb } from "tronweb-typings";
 
@@ -78,24 +81,24 @@ class TronNetwork extends BaseNetwork {
     const selfAddress = useSelfTronAddress();
 
     if (
-        balance === undefined ||
-        selfAddress === undefined ||
-        !selfAddress.base58
+      balance === undefined ||
+      selfAddress === undefined ||
+      !selfAddress.base58
     ) {
-        return undefined;
+      return undefined;
     } else {
-        return {
-            address: selfAddress?.base58,
-            network_currency_symbol: "TRX",
-            network_currency_amount: balance.toHumanString(3),
-        };
+      return {
+        address: selfAddress?.base58,
+        network_currency_symbol: "TRX",
+        network_currency_amount: balance.toHumanString(3),
+      };
     }
   }
 
   async decodeParams(types: any, output: any, ignoreMethodHash: any) {
     if (!output || typeof output === "boolean") {
-        ignoreMethodHash = output;
-        output = types;
+      ignoreMethodHash = output;
+      output = types;
     }
 
     if (ignoreMethodHash && output.replace(/^0x/, "").length % 64 === 8)
@@ -120,19 +123,19 @@ class TronNetwork extends BaseNetwork {
     const extension = getExtension();
 
     const rusdAddress: string | undefined = useTronContractCall(
-        SynergyTRONAddress,
-        SynergyABI,
-        "rUsd"
+      SynergyTRONAddress,
+      SynergyABI,
+      "rUsd"
     );
     const rusdBalance: BigNumber | undefined = useTronContractCall(
-        rusdAddress,
-        RusdABI,
-        "balanceOf",
-        [selfAddress?.base58]
+      rusdAddress,
+      RusdABI,
+      "balanceOf",
+      [selfAddress?.base58]
     );
 
     if (rusdBalance !== undefined) {
-        return new Amount(rusdBalance, 18);
+      return new Amount(rusdBalance, 18);
     }
     return undefined;
   }
@@ -142,22 +145,21 @@ class TronNetwork extends BaseNetwork {
     const extension = getExtension();
 
     const rusdAddress: string | undefined = useTronContractCall(
-        SynergyTRONAddress,
-        SynergyABI,
-        "raw"
+      SynergyTRONAddress,
+      SynergyABI,
+      "raw"
     );
     const rusdBalance: BigNumber | undefined = useTronContractCall(
-        rusdAddress,
-        RusdABI,
-        "balanceOf",
-        [selfAddress?.base58]
+      rusdAddress,
+      RusdABI,
+      "balanceOf",
+      [selfAddress?.base58]
     );
 
     if (rusdBalance !== undefined) {
-        return new Amount(rusdBalance, 18);
+      return new Amount(rusdBalance, 18);
     }
     return undefined;
-
   }
 
   getRawPrice(): Amount | undefined {
@@ -557,7 +559,26 @@ class TronNetwork extends BaseNetwork {
     amountToMint: Amount,
     amountToPledge: Amount,
     tx_state_changes_callback: (state: TXState) => void
-  ): void {
+  ): Function {
+    // console.log(amountToMint.amount, amountToPledge.amount);
+    const cb = useTronContractWrite(
+      SynergyTRONAddress,
+      SynergyABI,
+      "mint",
+      () => tx_state_changes_callback(TXState.AwaitWalletConfirmation),
+      () => tx_state_changes_callback(TXState.Broadcasting),
+      [amountToMint.amount, amountToPledge.amount]
+    );
+    useTronEvents(
+      SynergyTRONAddress,
+      SynergyABI,
+      "Mint",
+      (err: any, event: any) => {
+        console.log(err, event);
+      }
+    );
+    return cb;
+
     if (typeof window === "undefined") return null;
 
     const getAmount = async () => {
@@ -588,29 +609,45 @@ class TronNetwork extends BaseNetwork {
     getAmount();
   }
 
-  getBurnRusdCallback(amount: Amount): void {
-    if (typeof window === "undefined") return null;
+  getBurnRusdCallback(
+    amountToBurn: Amount,
+    tx_state_changes_callback: (state: TXState) => void
+  ): void {
+    const cb = useTronContractWrite(
+      SynergyTRONAddress,
+      SynergyABI,
+      "burn",
+      () => tx_state_changes_callback(TXState.AwaitWalletConfirmation),
+      () => tx_state_changes_callback(TXState.Broadcasting),
+      [amountToBurn.amount]
+    );
+    useTronEvents(
+      SynergyTRONAddress,
+      SynergyABI,
+      "Mint",
+      (err: any, event: any) => {
+        console.log(err, event);
+      }
+    );
+    return cb;
 
-    const burn = async () => {
-      const HexSynergyTRONAddress =
-        window.tronWeb.address.toHex(SynergyTRONAddress);
-      const HexUserAddress = window.tronWeb.address.toHex(
-        window.tronWeb.defaultAddress.base58
-      );
-    };
-    burn();
+    // if (typeof window === "undefined") return null;
+
+    // const burn = async () => {
+    //   const HexSynergyTRONAddress =
+    //     window.tronWeb.address.toHex(SynergyTRONAddress);
+    //   const HexUserAddress = window.tronWeb.address.toHex(
+    //     window.tronWeb.defaultAddress.base58
+    //   );
+
+    // };
+    // burn();
   }
 
   getStakeCallback(amount: Amount, date: Date) {
     const today: Date = new Date();
 
-    // to do something smartet
-    // if diff < 5 hours - 0
-
-    let lockTime = (date - today) / 1000;
-    if (lockTime / 60 < 5) {
-      lockTime = 0;
-    }
+    let lockTime = BigNumber.from(Math.round((date - today) / 1000));
 
     const stake = async () => {
       const HexInsuranceTRONAddress =
@@ -619,25 +656,66 @@ class TronNetwork extends BaseNetwork {
         window.tronWeb.defaultAddress.base58
       );
       const stakeCall = await triggerSmartContract(
-        HexSynergyTRONAddress,
-        "mint(uint256,uint256)",
+        HexInsuranceTRONAddress,
+        "stakeRaw(uint256,uint256)",
         {},
         [
           {
             type: "uint256",
-            value: amountToMint.amount,
+            value: lockTime,
           },
           {
             type: "uint256",
-            value: amountToPledge.amount,
+            value: amount.amount,
           },
         ]
       );
-      const signedTransaction = await sign(mintSign);
+      const signedTransaction = await sign(stakeCall);
       const result = await sendRawTransaction(signedTransaction);
     };
 
     stake();
+  }
+
+  getUserInssurances(): Array<any> {
+    const selfAddress = useSelfTronAddress();
+    const extension = getExtension();
+
+    const [userInsurances, setUserInsurances] = React.useState([]);
+
+    // https://beta.reactjs.org/learn/updating-arrays-in-state
+    // В арреи можно просто пушить
+    // реакт сообразит
+
+    // while (true) {
+    //   const insurance: any = useTronContractCall(
+    //     InsuranceTRONAddress,
+    //     InsuranceABI,
+    //     "userInsurances",
+    //     [selfAddress?.base58, userInsurances.length]
+    //   );
+
+    //   if (insurance !== undefined) {
+    //     setUserInsurances([...userInsurances, insurance]);
+    //   } else {
+    //     break
+    //   }
+    // }
+
+    // if (userInsurances !== undefined) {
+    //   return userInsurances;
+    // }
+    return undefined;
+
+    // return [
+    //   {
+    //     id: 123123,
+    //     raw_locked: 10,
+    //     locked_at: 2342134123123,
+    //     available_at: 1212312312312,
+    //     raw_repaid: 5,
+    //   },
+    // ];
   }
 
   _defineStateChangesCallback(

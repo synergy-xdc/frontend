@@ -426,6 +426,7 @@ const Burn: NextComponentType = () => {
         appearance="ghost"
         block
         style={{ marginBottom: 7, borderWidth: 2 }}
+        onClick={async () => networkProvider.getBurnRusdCallback(rusdValue)}
       >
         <b>Burn rUSD</b>
       </Button>

@@ -15,8 +15,11 @@ export const triggerSmartContract = async (
     const transaction = await tronweb.transactionBuilder.triggerSmartContract(
       address,
       functionSelector,
-      options,
-      // Object.assign({ feeLimit: 20 * 1e36 }, options),
+      // options,
+      {
+        shouldPollResponse: true, // Only used for sign()
+      },
+      // Object.assign({ shouldPollResponse: true }, options),
       parameters
     );
 

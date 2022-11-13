@@ -716,61 +716,43 @@ class TronNetwork extends BaseNetwork {
           },
         ]
       );
-
       const signedTransaction = await sign(mintSign);
       const result = await sendRawTransaction(signedTransaction);
-      const confirmed = await window.tronWeb.trx.getConfirmedTransaction(
-        "6e0977438d794eea73ac532398b3737ec71bbbf890bee0f8cfd60fc0f6822027"
-      );
-
-      console.log(confirmed);
     };
     getAmount();
   }
 
-  // getBurnRusdCallback(amount: Amount): Function {
-  //   const { account } = useAccount();
-  //   const mintSign = useContractWrite({
-  //     address: SynergyAddress,
-  //     abi: SynergyABI,
-  //     functionName: "mint",
-  //     args: [amountToMint.amount, amountToPledge.amount],
-  //     chainId: chains.goerli.id,
-  //   });
-  //   useContractEvent({
-  //     address: SynergyAddress,
-  //     abi: SynergyABI,
-  //     eventName: "Minted",
-  //     listener: (...event) => {
-  //       console.log(event);
-  //       if (
-  //         event[2].transactionHash == mintSign.data?.hash &&
-  //         this.mintState == TXState.Broadcasting
-  //       ) {
-  //         this.mintState = TXState.Done;
-  //         tx_state_changes_callback(TXState.Success);
-  //       }
-  //     },
-  //   });
-  //   const signWait = useWaitForTransaction({ hash: mintSign.data?.hash });
-  //   const newMintState = this._defineStateChangesCallback(
-  //     signWait.isWaiting,
-  //     mintSign.isLoading,
-  //     this.mintState
-  //   );
+  getBurnRusdCallback(amount: Amount): void {
+    if (typeof window === "undefined") return null;
 
-  //   if (this.mintState !== newMintState) {
-  //     console.log(
-  //       signWait.isWaiting,
-  //       mintSign.isLoading,
-  //       this.mintState,
-  //       newMintState
-  //     );
-  //     this.mintState = newMintState;
-  //     tx_state_changes_callback(newMintState);
-  //   }
-  //   return mintSign.write;
-  // }
+    const burn = async () => {
+      const HexSynergyTRONAddress =
+        window.tronWeb.address.toHex(SynergyTRONAddress);
+      const HexUserAddress = window.tronWeb.address.toHex(
+        "TXFgYs86FwBYSn4Js6FXwiyo4iJPxuBtq7"
+      );
+
+      //   const mintSign = await triggerSmartContract(
+      //     HexSynergyTRONAddress,
+      //     "burn(uint256,bytes32)",
+      //     {},
+      //     [
+      //       {
+      //         type: "uint256",
+      //         value: amount.amount,
+      //       },
+      //       {
+      //         type: "bytes32",
+      //         value: 0,
+      //       },
+      //     ]
+      //   );
+
+      //   const signedTransaction = await sign(mintSign);
+      //   const result = await sendRawTransaction(signedTransaction);
+    };
+    burn();
+  }
 
   _defineStateChangesCallback(
     isWaiting: boolean,

@@ -463,42 +463,6 @@ class TronNetwork extends BaseNetwork {
 
       getAllowance();
     }, []);
-
-    // const wethContractAdressCall = await
-
-    // const wethAllowanceCall = useContractRead({
-    //   address: synergyCallResult.data as string,
-    //   abi: WethABI,
-    //   functionName: "allowance",
-    //   args: [account.address, SynergyAddress],
-    //   chainId: chains.goerli.id,
-    // });
-
-    // useContractEvent({
-    //   address: synergyCallResult.data ? synergyCallResult.data : "0x0",
-    //   abi: WethABI,
-    //   eventName: "Approval",
-    //   listener: (...event) => {
-    //     wethAllowanceCall.refetch().then((val) => val);
-    //   },
-    // });
-    // useContractEvent({
-    //   address: synergyCallResult.data ? synergyCallResult.data : "0x0",
-    //   abi: WethABI,
-    //   eventName: "Transfer",
-    //   listener: (...event) => {
-    //     wethAllowanceCall.refetch().then((val) => val);
-    //   },
-    // });
-    // if (
-    //   wethAllowanceCall.data !== undefined &&
-    //   wethContract.data?.decimals !== undefined
-    // ) {
-    //   const balance: BigNumber = wethAllowanceCall.data as BigNumber;
-    //   return new Amount(balance, wethContract.data.decimals);
-    // }
-    // return undefined;
-
     return amount;
   }
 
@@ -548,40 +512,6 @@ class TronNetwork extends BaseNetwork {
       getAmount();
     }, []);
 
-    // const synergyCollateralRatioCall = useContractRead({
-    //   address: SynergyAddress,
-    //   abi: SynergyABI,
-    //   functionName: "collateralRatio",
-    //   args: [account.address],
-    //   chainId: chains.goerli.id,
-    // });
-    // const wethCall = useContractRead({
-    //   address: SynergyAddress,
-    //   abi: SynergyABI,
-    //   functionName: "wEth",
-    //   chainId: chains.goerli.id,
-    // });
-    // useContractEvent({
-    //   address: wethCall.data ? wethCall.data : "0x0",
-    //   abi: WethABI,
-    //   eventName: "Approval",
-    //   listener: (...event) => {
-    //     synergyCollateralRatioCall.refetch().then((val) => val);
-    //   },
-    // });
-    // useContractEvent({
-    //   address: wethCall.data ? wethCall.data : "0x0",
-    //   abi: WethABI,
-    //   eventName: "Transfer",
-    //   listener: (...event) => {
-    //     synergyCollateralRatioCall.refetch().then((val) => val);
-    //   },
-    // });
-    // if (synergyCollateralRatioCall.data !== undefined) {
-    //   return synergyCollateralRatioCall.data / 10 ** 6;
-    // }
-
-    // return undefined;
     return amount;
   }
 
@@ -624,18 +554,6 @@ class TronNetwork extends BaseNetwork {
     }, []);
 
     return amount;
-
-    // const synergyMinCollateralRatioCall = useContractRead({
-    //   address: SynergyAddress,
-    //   abi: SynergyABI,
-    //   functionName: "minCollateralRatio",
-    //   chainId: chains.goerli.id,
-    // });
-    // if (synergyMinCollateralRatioCall.data !== undefined) {
-    //   const ratio: number = synergyMinCollateralRatioCall.data as number;
-    //   return (ratio / 10 ** 8) * 100;
-    // }
-    // return undefined;
   }
 
   getNewWethAllowanceCallback(
@@ -705,49 +623,6 @@ class TronNetwork extends BaseNetwork {
       console.log(result);
     };
     getAmount();
-
-    // const setWethAllowanceSign = useContractWrite({
-    //   address: synergyWethCall.data,
-    //   abi: WethABI,
-    //   functionName: "approve",
-    //   args: [SynergyAddress, amount.amount],
-    //   chainId: chains.goerli.id,
-    // });
-    // useContractEvent({
-    //   address: synergyWethCall.data ? synergyWethCall.data : "0x0",
-    //   abi: WethABI,
-    //   eventName: "Approval",
-    //   listener: (...event) => {
-    //     console.log(event, this.wethApproveState);
-    //     if (
-    //       event[3].transactionHash == setWethAllowanceSign.data?.hash &&
-    //       this.wethApproveState == TXState.Broadcasting
-    //     ) {
-    //       // this.showedTxs.push(setWethAllowanceSign.data?.hash);
-    //       this.wethApproveState = TXState.Done;
-    //       tx_state_changes_callback(TXState.Success);
-    //     }
-    //   },
-    // });
-    // const signWait = useWaitForTransaction({
-    //   hash: setWethAllowanceSign.data?.hash,
-    // });
-    // const wethApproveNewState = this._defineStateChangesCallback(
-    //   signWait.isWaiting,
-    //   setWethAllowanceSign.isLoading,
-    //   this.wethApproveState
-    // );
-    // if (this.wethApproveState !== wethApproveNewState) {
-    //   console.log(
-    //     signWait.isWaiting,
-    //     setWethAllowanceSign.isLoading,
-    //     this.wethApproveState,
-    //     wethApproveNewState
-    //   );
-    //   this.wethApproveState = wethApproveNewState;
-    //   tx_state_changes_callback(wethApproveNewState);
-    // }
-    // return setWethAllowanceSign.write;
   }
 
   predictCollateralRatio(
@@ -811,48 +686,6 @@ class TronNetwork extends BaseNetwork {
     }, [amountToMint, amountToPledge]);
 
     return amount;
-    // const { account, isReady } = useAccount();
-    // const predictCollateralRatioCall = useContractRead({
-    //   address: SynergyAddress,
-    //   abi: SynergyABI,
-    //   functionName: "predictCollateralRatio",
-    //   args: [
-    //     account.address,
-    //     amountToMint.amount,
-    //     amountToPledge.amount,
-    //     increase,
-    //   ],
-    //   chainId: chains.goerli.id,
-    // });
-    // const wethCall = useContractRead({
-    //   address: SynergyAddress,
-    //   abi: SynergyABI,
-    //   functionName: "wEth",
-    //   chainId: chains.goerli.id,
-    // });
-    // useContractEvent({
-    //   address: wethCall.data ? wethCall.data : "0x0",
-    //   abi: WethABI,
-    //   eventName: "Approval",
-    //   listener: (...event) => {
-    //     predictCollateralRatioCall.refetch().then((val) => val);
-    //   },
-    // });
-    // useContractEvent({
-    //   address: wethCall.data ? wethCall.data : "0x0",
-    //   abi: WethABI,
-    //   eventName: "Transfer",
-    //   listener: (...event) => {
-    //     predictCollateralRatioCall.refetch().then((val) => val);
-    //   },
-    // });
-    // if (predictCollateralRatioCall.data !== undefined) {
-    //   const cratio = predictCollateralRatioCall.data as BigNumber;
-    //   const cratioAmount = new Amount(cratio, 6);
-    //   return parseFloat(cratioAmount.toHumanString(2));
-    // } else {
-    //   return undefined;
-    // }
   }
 
   getMintCallback(

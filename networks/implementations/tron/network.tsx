@@ -78,24 +78,24 @@ class TronNetwork extends BaseNetwork {
     const selfAddress = useSelfTronAddress();
 
     if (
-      balance === undefined ||
-      selfAddress === undefined ||
-      !selfAddress.base58
+        balance === undefined ||
+        selfAddress === undefined ||
+        !selfAddress.base58
     ) {
-      return undefined;
+        return undefined;
     } else {
-      return {
-        address: selfAddress?.base58,
-        network_currency_symbol: "TRX",
-        network_currency_amount: balance.toHumanString(3),
-      };
+        return {
+            address: selfAddress?.base58,
+            network_currency_symbol: "TRX",
+            network_currency_amount: balance.toHumanString(3),
+        };
     }
   }
 
   async decodeParams(types: any, output: any, ignoreMethodHash: any) {
     if (!output || typeof output === "boolean") {
-      ignoreMethodHash = output;
-      output = types;
+        ignoreMethodHash = output;
+        output = types;
     }
 
     if (ignoreMethodHash && output.replace(/^0x/, "").length % 64 === 8)
@@ -120,81 +120,44 @@ class TronNetwork extends BaseNetwork {
     const extension = getExtension();
 
     const rusdAddress: string | undefined = useTronContractCall(
-      SynergyTRONAddress,
-      SynergyABI,
-      "rUsd"
+        SynergyTRONAddress,
+        SynergyABI,
+        "rUsd"
     );
     const rusdBalance: BigNumber | undefined = useTronContractCall(
-      rusdAddress,
-      RusdABI,
-      "balanceOf",
-      [selfAddress?.base58]
+        rusdAddress,
+        RusdABI,
+        "balanceOf",
+        [selfAddress?.base58]
     );
 
     if (rusdBalance !== undefined) {
-      return new Amount(rusdBalance, 18);
+        return new Amount(rusdBalance, 18);
     }
     return undefined;
   }
 
-  //GET RAW BALANCE
-
   getRawBalance(): Amount | undefined {
-    const [amount, setAmount] = useState(undefined);
+    const selfAddress = useSelfTronAddress();
+    const extension = getExtension();
 
-    useEffect(() => {
-      const getAmount = async () => {
-        const HexSynergyTRONAddress =
-          window.tronWeb.address.toHex(SynergyTRONAddress);
-        const HexUserAddress = window.tronWeb.address.toHex(
-          window.tronWeb.defaultAddress.base58
-        );
+    const rusdAddress: string | undefined = useTronContractCall(
+        SynergyTRONAddress,
+        SynergyABI,
+        "raw"
+    );
+    const rusdBalance: BigNumber | undefined = useTronContractCall(
+        rusdAddress,
+        RusdABI,
+        "balanceOf",
+        [selfAddress?.base58]
+    );
 
-        console.log(HexUserAddress);
+    if (rusdBalance !== undefined) {
+        return new Amount(rusdBalance, 18);
+    }
+    return undefined;
 
-        const rawTransaction =
-          await window.tronWeb.transactionBuilder.triggerConstantContract(
-            HexSynergyTRONAddress,
-            "raw()",
-            {},
-            [],
-            HexUserAddress
-          );
-        const rawTransactionResult = rawTransaction["constant_result"][0];
-        const rawTransactionResultDecoded = await this.decodeParams(
-          ["address"],
-          "0x" + rawTransactionResult,
-          false
-        );
-        const balanceOfTransaction =
-          await window.tronWeb.transactionBuilder.triggerConstantContract(
-            rawTransactionResultDecoded[0],
-            "balanceOf(address)",
-            {},
-            [
-              {
-                type: "address",
-                value: HexUserAddress,
-              },
-            ],
-            HexUserAddress
-          );
-        const balanceOfTransactionResult =
-          balanceOfTransaction["constant_result"][0];
-        const balanceOfTransactionResultDecoded = await this.decodeParams(
-          ["uint256"],
-          "0x" + balanceOfTransactionResult,
-          false
-        );
-        const amount: any = new Amount(
-          balanceOfTransactionResultDecoded[0],
-          18
-        );
-        setAmount(amount);
-      };
-      getAmount();
-    }, []);
-    return amount;
   }
 
   getRawPrice(): Amount | undefined {

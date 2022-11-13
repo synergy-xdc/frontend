@@ -65,7 +65,7 @@ const ConnectedWallet: NextComponentType = () => {
       autoConnect: true,
     },
   };
-  const [network, setNetwork] = React.useState<string>("ethereum");
+  const [network, setNetwork] = React.useState<string>("tron");
 
   const showWallet = () => {
     const wallet = AVAILABLE_NETWORKS[network].showWallet();
@@ -115,8 +115,8 @@ const ConnectedWallet: NextComponentType = () => {
 };
 const Networks = [
   {
-    label: <span>Ethereum</span>,
-    value: "ethereum",
+    label: <span>TRON</span>,
+    value: "tron",
   },
 ];
 

@@ -80,7 +80,10 @@ export const useTronEvents  = (
 ): void => {
     const extension = getExtension();
     extension?.contract(abi).at(address).then((contract: any) => {
-        contract[eventName].watch(cb);
+        contract[eventName]().watch((err, event) => {
+            console.log("EVENT", err, event)
+            cb(err, event)
+        }).then((res) => console.log("EVENT PROMISE", res));
     }).catch((err: any) => console.log(err));
 }
 

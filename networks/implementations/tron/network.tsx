@@ -4,7 +4,7 @@ import Amount from "@/networks/base/amount";
 import TXState from "@/networks/base/txstate";
 
 import { ReactNode, useEffect, useState } from "react";
-import { BigNumber, utils } from "ethers";
+import { BigNumber, Bytes, utils } from "ethers";
 import React from "react";
 import { Button } from "rsuite";
 import {
@@ -29,6 +29,7 @@ import WethABI from "@/abi/WETH.json";
 import InsuranceABI from "@/abi/Insurance.json";
 
 import type { TronWeb } from "tronweb-typings";
+import { isUndefined } from "util";
 
 const AbiCoder = utils.AbiCoder;
 const ADDRESS_PREFIX = "41";
@@ -41,8 +42,7 @@ const ADDRESS_PREFIX = "41";
 // }
 
 // const SynergyAddress: string = "0x2f6F4493bb82f00Ed346De9353EF22cA277b7680";
-const SynergyTRONAddress: string = "TQkDaoJsFuYpj8ZZvhaWdSrPTWUNc2ByQ1";
-const InsuranceTRONAddress: string = "TNAcvrtUuVqMaUY5UJC86EbCjsGAx2zUZ6";
+const SynergyTRONAddress: string = "TVmQ81jx8v5jT4u6qKkGdajnBKZTA7UJUg";
 
 const AvailableSynth: Synth[] = [
     {
@@ -60,40 +60,35 @@ const AvailableSynth: Synth[] = [
 ];
 
 class TronNetwork extends BaseNetwork {
-  wethApproveState: TXState = TXState.Done;
-  mintState: TXState = TXState.Done;
-
-  showedTxs: string[] = [];
-
-  connectButton(): ReactNode {
-    return (
-      <Button
-        style={{ backgroundColor: "linear-gradient(transparent, #089a81)" }}
-        appearance="primary"
-      >
-        Connect Wallet
-      </Button>
-    );
-  }
-
-  showWallet(): WalletPrimaryData | undefined {
-    const balance = useSelfTronBalance();
-    const selfAddress = useSelfTronAddress();
-
-    if (
-      balance === undefined ||
-      selfAddress === undefined ||
-      !selfAddress.base58
-    ) {
-      return undefined;
-    } else {
-      return {
-        address: selfAddress?.base58,
-        network_currency_symbol: "TRX",
-        network_currency_amount: balance.toHumanString(3),
-      };
+    connectButton(): ReactNode {
+        return (
+        <Button
+            style={{ backgroundColor: "linear-gradient(transparent, #089a81)" }}
+            appearance="primary"
+        >
+            Connect Wallet
+        </Button>
+        );
     }
-  }
+
+    showWallet(): WalletPrimaryData | undefined {
+        const balance = useSelfTronBalance();
+        const selfAddress = useSelfTronAddress();
+
+        if (
+            balance === undefined ||
+            selfAddress === undefined ||
+            !selfAddress.base58
+        ) {
+            return undefined;
+        } else {
+            return {
+                address: selfAddress?.base58,
+                network_currency_symbol: "TRX",
+                network_currency_amount: balance.toHumanString(3),
+            };
+        }
+    }
 
   async decodeParams(types: any, output: any, ignoreMethodHash: any) {
     if (!output || typeof output === "boolean") {
@@ -118,121 +113,48 @@ class TronNetwork extends BaseNetwork {
     }, []);
   }
 
-  getRusdBalance(): Amount | undefined {
-    const selfAddress = useSelfTronAddress();
-    const extension = getExtension();
+    getRusdBalance(): Amount | undefined {
+        const selfAddress = useSelfTronAddress();
+        const extension = getExtension();
 
-    const rusdAddress: string | undefined = useTronContractCall(
-      SynergyTRONAddress,
-      SynergyABI,
-      "rUsd"
-    );
-    const rusdBalance: BigNumber | undefined = useTronContractCall(
-      rusdAddress,
-      RusdABI,
-      "balanceOf",
-      [selfAddress?.base58]
-    );
+        const rusdAddress: string | undefined = useTronContractCall(
+            SynergyTRONAddress,
+            SynergyABI,
+            "rUsd"
+        );
+        const rusdBalance: BigNumber | undefined = useTronContractCall(
+            rusdAddress,
+            RusdABI,
+            "balanceOf",
+            [selfAddress?.base58]
+        );
 
-    if (rusdBalance !== undefined) {
-      return new Amount(rusdBalance, 18);
+        if (rusdBalance !== undefined) {
+            return new Amount(rusdBalance, 18);
+        }
+        return undefined;
     }
-    return undefined;
-  }
 
   getRawBalance(): Amount | undefined {
     const selfAddress = useSelfTronAddress();
     const extension = getExtension();
 
     const rusdAddress: string | undefined = useTronContractCall(
-      SynergyTRONAddress,
-      SynergyABI,
-      "raw"
+        SynergyTRONAddress,
+        SynergyABI,
+        "raw"
     );
     const rusdBalance: BigNumber | undefined = useTronContractCall(
-      rusdAddress,
-      RusdABI,
-      "balanceOf",
-      [selfAddress?.base58]
+        rusdAddress,
+        RusdABI,
+        "balanceOf",
+        [selfAddress?.base58]
     );
 
     if (rusdBalance !== undefined) {
       return new Amount(rusdBalance, 18);
     }
     return undefined;
-  }
-
-  getRawPrice(): Amount | undefined {
-    const [amount, setAmount] = useState(undefined);
-
-    useEffect(() => {
-      const getAmount = async () => {
-        const HexSynergyTRONAddress =
-          window.tronWeb.address.toHex(SynergyTRONAddress);
-        const HexUserAddress = window.tronWeb.address.toHex(
-          window.tronWeb.defaultAddress.base58
-        );
-        const oracleContractAddressCall =
-          await window.tronWeb.transactionBuilder.triggerConstantContract(
-            HexSynergyTRONAddress,
-            "oracle()",
-            {},
-            [],
-            HexUserAddress
-          );
-        const oracleContractAddress =
-          oracleContractAddressCall["constant_result"][0];
-
-        const oracleContractAddressDecoded = await this.decodeParams(
-          ["address"],
-          "0x" + oracleContractAddress,
-          false
-        );
-
-        const rawContractAddressCall =
-          await window.tronWeb.transactionBuilder.triggerConstantContract(
-            HexSynergyTRONAddress,
-            "raw()",
-            {},
-            [],
-            HexUserAddress
-          );
-
-        const rawContractAddress = rawContractAddressCall["constant_result"][0];
-
-        const rawContractAddressDecoded = await this.decodeParams(
-          ["address"],
-          "0x" + rawContractAddress,
-          false
-        );
-
-        const rawPriceCall =
-          await window.tronWeb.transactionBuilder.triggerConstantContract(
-            oracleContractAddressDecoded[0],
-            "getPrice(address)",
-            {},
-            [
-              {
-                type: "address",
-                value: rawContractAddressDecoded[0],
-              },
-            ],
-            HexUserAddress
-          );
-
-        const rawPrice = rawPriceCall["constant_result"][0];
-        const rawPriceDecoded = await this.decodeParams(
-          ["uint256"],
-          "0x" + rawPrice,
-          false
-        );
-
-        const amount: any = new Amount(rawPriceDecoded[0], 18);
-        setAmount(amount);
-      };
-      getAmount();
-    }, []);
-    return amount;
   }
 
   getWethPrice(): number | undefined {
@@ -240,169 +162,65 @@ class TronNetwork extends BaseNetwork {
   }
 
   getWethBalance(): Amount | undefined {
-    const [amount, setAmount] = useState(undefined);
-    useEffect(() => {
-      const getAmount = async () => {
-        const HexSynergyTRONAddress =
-          window.tronWeb.address.toHex(SynergyTRONAddress);
-        const HexUserAddress = window.tronWeb.address.toHex(
-          window.tronWeb.defaultAddress.base58
-        );
+    const selfAddress = useSelfTronAddress();
+    const wtrxAddress: string | undefined = useTronContractCall(
+        SynergyTRONAddress,
+        SynergyABI,
+        "wEth"
+    );
+    const wtrxBalance: BigNumber | undefined = useTronContractCall(
+        wtrxAddress,
+        WethABI,
+        "balanceOf",
+        [selfAddress?.base58]
+    );
 
-        const wethContractAddressCall =
-          await window.tronWeb.transactionBuilder.triggerConstantContract(
-            HexSynergyTRONAddress,
-            "wEth()",
-            {},
-            [],
-            HexUserAddress
-          );
-
-        const wethContractAddress =
-          wethContractAddressCall["constant_result"][0];
-
-        const wethContractAddressDecoded = await this.decodeParams(
-          ["address"],
-          "0x" + wethContractAddress,
-          false
-        );
-
-        const wethBalanceOfCall =
-          await window.tronWeb.transactionBuilder.triggerConstantContract(
-            wethContractAddressDecoded[0],
-            "balanceOf(address)",
-            {},
-            [
-              {
-                type: "address",
-                value: HexUserAddress,
-              },
-            ],
-            HexUserAddress
-          );
-
-        const wethBalanceOf = wethBalanceOfCall["constant_result"][0];
-        const wethBalanceOfDecoded = await this.decodeParams(
-          ["uint256"],
-          "0x" + wethBalanceOf,
-          false
-        );
-
-        const amount: any = new Amount(wethBalanceOfDecoded[0], 18);
-        setAmount(amount);
-      };
-      getAmount();
-    }, []);
-    return amount;
+    if (wtrxBalance !== undefined) {
+        return new Amount(wtrxBalance, 18)
+    }
+    return undefined;
   }
 
   getWethAllowance(): Amount | undefined {
     const [amount, setAmount] = useState(undefined);
 
-    useEffect(() => {
-      const getAllowance = async () => {
-        const HexSynergyTRONAddress =
-          window.tronWeb.address.toHex(SynergyTRONAddress);
-        const HexUserAddress = window.tronWeb.address.toHex(
-          window.tronWeb.defaultAddress.base58
-        );
-        const wethContractAddressCall =
-          await window.tronWeb.transactionBuilder.triggerConstantContract(
-            HexSynergyTRONAddress,
-            "wEth()",
-            {},
-            [],
-            HexUserAddress
-          );
+    const selfAddress = useSelfTronAddress();
+    const wtrxAddress: string | undefined = useTronContractCall(
+        SynergyTRONAddress,
+        SynergyABI,
+        "wEth"
+    );
+    const wtrxAllowance: BigNumber | undefined = useTronContractCall(
+        wtrxAddress,
+        WethABI,
+        "allowance",
+        [selfAddress?.base58, SynergyTRONAddress]
+    );
 
-        const wethContractAddress =
-          wethContractAddressCall["constant_result"][0];
-
-        const wethContractAddressDecoded = await this.decodeParams(
-          ["address"],
-          "0x" + wethContractAddress,
-          false
-        );
-
-        const wethAllowanceCall =
-          await window.tronWeb.transactionBuilder.triggerSmartContract(
-            wethContractAddressDecoded[0],
-            "allowance(address,address)",
-            {},
-            [
-              {
-                type: "address",
-                value: HexUserAddress,
-              },
-              {
-                type: "address",
-                value: HexSynergyTRONAddress,
-              },
-            ],
-            HexUserAddress
-          );
-        const wethAllowance = wethAllowanceCall["constant_result"][0];
-        const wethAllowanceDecoded = await this.decodeParams(
-          ["uint256"],
-          "0x" + wethAllowance,
-          false
-        );
-
-        const amount: any = new Amount(wethAllowanceDecoded[0], 18);
-        setAmount(amount);
-      };
-
-      getAllowance();
-    }, []);
-    return amount;
+    if (wtrxAllowance !== undefined) {
+        return new Amount(wtrxAllowance, 18)
+    }
+    return undefined;
   }
 
   getAvailableSynths(): Synth[] {
     return AvailableSynth;
   }
 
-  getCurrentCRatio(): number | undefined {
-    const [amount, setAmount] = useState();
-
-    useEffect(() => {
-      const getAmount = async () => {
-        const HexSynergyTRONAddress =
-          window.tronWeb.address.toHex(SynergyTRONAddress);
-        const HexUserAddress = window.tronWeb.address.toHex(
-          window.tronWeb.defaultAddress.base58
-        );
-        const synergyCollateralRatioCall =
-          await window.tronWeb.transactionBuilder.triggerConstantContract(
-            HexSynergyTRONAddress,
-            "collateralRatio(address)",
-            {},
-            [
-              {
-                type: "address",
-                value: HexUserAddress,
-              },
-            ],
-            HexUserAddress
-          );
-
-        const synergyCollateralRatio =
-          synergyCollateralRatioCall["constant_result"][0];
-
-        const wethAllowanceDecoded = await this.decodeParams(
-          ["uint32"],
-          "0x" + synergyCollateralRatio,
-          false
+    getCurrentCRatio(): number | undefined {
+        const selfAddress = useSelfTronAddress();
+        const cration: number | undefined = useTronContractCall(
+            SynergyTRONAddress,
+            SynergyABI,
+            "collateralRatio",
+            [selfAddress?.hex]
         );
 
-        const amount: any = wethAllowanceDecoded[0] / 10 ** 6;
-        setAmount(amount);
-      };
-
-      getAmount();
-    }, []);
-
-    return amount;
-  }
+        if (cration !== undefined) {
+            return cration / 10 ** 6
+        }
+        return cration
+    }
 
   getMinCRatio(): number | undefined {
     const [amount, setAmount] = useState();
@@ -446,203 +264,97 @@ class TronNetwork extends BaseNetwork {
   getNewWethAllowanceCallback(
     amount: Amount,
     tx_state_changes_callback: (state: TXState) => void
-  ): void {
-    if (typeof window === "undefined") return null;
-
-    const getAmount = async () => {
-      const HexSynergyTRONAddress =
-        window.tronWeb.address.toHex(SynergyTRONAddress);
-      const HexUserAddress = window.tronWeb.address.toHex(
-        window.tronWeb.defaultAddress.base58
-      );
-
-      const wethContractAddressCall =
-        await window.tronWeb.transactionBuilder.triggerConstantContract(
-          HexSynergyTRONAddress,
-          "wEth()",
-          {},
-          [],
-          HexUserAddress
-        );
-
-      const wethContractAddress = wethContractAddressCall["constant_result"][0];
-      const wethContractAddressDecoded = await this.decodeParams(
-        ["address"],
-        "0x" + wethContractAddress,
-        false
-      );
-
-      const setWethAllowanceSign = await triggerSmartContract(
-        wethContractAddressDecoded[0],
-        "approve(address,uint256)",
-        {},
-        [
-          {
-            type: "address",
-            value: "TQkDaoJsFuYpj8ZZvhaWdSrPTWUNc2ByQ1",
-          },
-          {
-            type: "uint256",
-            value: amount.amount,
-          },
-        ]
-      );
-      const signedTransaction = await sign(setWethAllowanceSign);
-      const result = await sendRawTransaction(signedTransaction);
-    };
-    getAmount();
-  }
-
-  predictCollateralRatio(
-    amountToMint: Amount,
-    amountToPledge: Amount,
-    increase: boolean
-  ): number | undefined {
-    const [amount, setAmount] = useState();
-    useEffect(() => {
-      const getAmount = async () => {
-        const HexSynergyTRONAddress =
-          window.tronWeb.address.toHex(SynergyTRONAddress);
-
-        const HexUserAddress = window.tronWeb.address.toHex(
-          window.tronWeb.defaultAddress.base58
-        );
-
-        const predictCollateralRatioCall =
-          await window.tronWeb.transactionBuilder.triggerConstantContract(
-            HexSynergyTRONAddress,
-            "predictCollateralRatio(address,uint256,uint256,bool)",
-            {},
-            [
-              {
-                type: "address",
-                value: HexUserAddress,
-              },
-              {
-                type: "uint256",
-                value: amountToMint.amount,
-              },
-              {
-                type: "uint256",
-                value: amountToPledge.amount,
-              },
-              {
-                type: "bool",
-                value: increase,
-              },
-            ],
-            HexUserAddress
-          );
-
-        const predictCollateralRatio =
-          predictCollateralRatioCall["constant_result"][0];
-
-        const predictCollateralRatioDecoded = await this.decodeParams(
-          ["uint32"],
-          "0x" + predictCollateralRatio,
-          false
-        );
-
-        let amount: any = new Amount(predictCollateralRatioDecoded[0], 6);
-        amount = parseFloat(amount.toHumanString(2));
-        //  parseFloat(cratioAmount.toHumanString(2));
-        setAmount(amount);
-      };
-
-      getAmount();
-    }, [amountToMint, amountToPledge]);
-
-    return amount;
-  }
-
-  getMintCallback(
-    amountToMint: Amount,
-    amountToPledge: Amount,
-    tx_state_changes_callback: (state: TXState) => void
   ): Function {
-    // console.log(amountToMint.amount, amountToPledge.amount);
+    const wtrxContract: string | undefined = useTronContractCall(
+        SynergyTRONAddress,
+        SynergyABI,
+        "wEth"
+    );
     const cb = useTronContractWrite(
-      SynergyTRONAddress,
-      SynergyABI,
-      "mint",
-      () => tx_state_changes_callback(TXState.AwaitWalletConfirmation),
-      () => tx_state_changes_callback(TXState.Broadcasting),
-      [amountToMint.amount, amountToPledge.amount]
+        wtrxContract,
+        WethABI,
+        "approve",
+        () => tx_state_changes_callback(TXState.AwaitWalletConfirmation),
+        () => tx_state_changes_callback(TXState.Success),
+        [SynergyTRONAddress, amount.amount]
     );
     useTronEvents(
-      SynergyTRONAddress,
-      SynergyABI,
-      "Mint",
-      (err: any, event: any) => {
-        console.log(err, event);
-      }
+        SynergyTRONAddress,
+        SynergyABI,
+        "Approval",
+        (err: any, event: any) => {
+            console.log(err, event);
+        }
     );
     return cb;
-
-    if (typeof window === "undefined") return null;
-
-    const getAmount = async () => {
-      const HexSynergyTRONAddress =
-        window.tronWeb.address.toHex(SynergyTRONAddress);
-      const HexUserAddress = window.tronWeb.address.toHex(
-        window.tronWeb.defaultAddress.base58
-      );
-
-      const mintSign = await triggerSmartContract(
-        HexSynergyTRONAddress,
-        "mint(uint256,uint256)",
-        {},
-        [
-          {
-            type: "uint256",
-            value: amountToMint.amount,
-          },
-          {
-            type: "uint256",
-            value: amountToPledge.amount,
-          },
-        ]
-      );
-      const signedTransaction = await sign(mintSign);
-      const result = await sendRawTransaction(signedTransaction);
-    };
-    getAmount();
   }
 
-  getBurnRusdCallback(
-    amountToBurn: Amount,
-    tx_state_changes_callback: (state: TXState) => void
-  ): void {
-    const cb = useTronContractWrite(
-      SynergyTRONAddress,
-      SynergyABI,
-      "burn",
-      () => tx_state_changes_callback(TXState.AwaitWalletConfirmation),
-      () => tx_state_changes_callback(TXState.Broadcasting),
-      [amountToBurn.amount]
-    );
-    useTronEvents(
-      SynergyTRONAddress,
-      SynergyABI,
-      "Mint",
-      (err: any, event: any) => {
-        console.log(err, event);
-      }
-    );
-    return cb;
+    predictCollateralRatio(
+        amountToMint: Amount,
+        amountToPledge: Amount,
+        increase: boolean
+    ): number | undefined {
+        const selfAddress = useSelfTronAddress();
+        const newCratio: BigNumber | undefined = useTronContractCall(
+            SynergyTRONAddress,
+            SynergyABI,
+            "predictCollateralRatio",
+            [selfAddress?.base58, amountToMint.amount, amountToPledge.amount, increase]
+        );
+        console.log(newCratio)
 
-    // if (typeof window === "undefined") return null;
+        if (newCratio !== undefined) {
+            return newCratio.div(BigNumber.from(10).pow(6)).toNumber()
+        }
+        return undefined
+    }
 
-    // const burn = async () => {
-    //   const HexSynergyTRONAddress =
-    //     window.tronWeb.address.toHex(SynergyTRONAddress);
-    //   const HexUserAddress = window.tronWeb.address.toHex(
-    //     window.tronWeb.defaultAddress.base58
-    //   );
+    getMintCallback(
+        amountToMint: Amount,
+        amountToPledge: Amount,
+        tx_state_changes_callback: (state: TXState) => void
+    ): Function {
+        const cb = useTronContractWrite(
+            SynergyTRONAddress,
+            SynergyABI,
+            "mint",
+            () => tx_state_changes_callback(TXState.AwaitWalletConfirmation),
+            () => tx_state_changes_callback(TXState.Success),
+            [amountToMint.amount, amountToPledge.amount]
+        );
+        useTronEvents(
+            SynergyTRONAddress,
+            SynergyABI,
+            "Minted",
+            (err: any, event: any) => {
+                console.log(err, event);
+            }
+        );
+        return cb;
+    }
 
-    // };
-    // burn();
-  }
+    getBurnRusdCallback(
+        amountToBurn: Amount,
+        tx_state_changes_callback: (state: TXState) => void
+    ): void {
+        const cb = useTronContractWrite(
+            SynergyTRONAddress,
+            SynergyABI,
+            "burn",
+            () => tx_state_changes_callback(TXState.AwaitWalletConfirmation),
+            () => tx_state_changes_callback(TXState.Success),
+            [amountToBurn.amount]
+        );
+        useTronEvents(
+            SynergyTRONAddress,
+            SynergyABI,
+            "Minted",
+            (err: any, event: any) => {
+                console.log(err, event);
+            }
+        );
+        return cb;
+    }
 
   getStakeCallback(amount: Amount, date: Date) {
     const today: Date = new Date();
@@ -682,29 +394,37 @@ class TronNetwork extends BaseNetwork {
 
     const [userInsurances, setUserInsurances] = React.useState<FrontendUserInsurance[]>([]);
 
-    const insurance: ContractUserInsurance = useTronContractCall(
-        InsuranceTRONAddress,
+    const insuranceAddress: string | undefined = useTronContractCall(
+        SynergyTRONAddress,
+        SynergyABI,
+        "insurance"
+    );
+
+    const insuranceId: string | undefined = useTronContractCall(
+        insuranceAddress,
         InsuranceABI,
         "userInsurances",
         [selfAddress?.base58, userInsurances.length]
     );
 
+    const insurance: ContractUserInsurance = useTronContractCall(
+        insuranceAddress,
+        InsuranceABI,
+        "insurances",
+        [insuranceId]
+    );
+
     if (insurance !== undefined) {
         userInsurances.push({
-
-        })
+          id: insuranceId,
+          rawLocked: new Amount(insurance.stakedRaw, 18).toHumanString(4),
+          lockedAt: new Date(insurance.startTime.toNumber() * 1000).toString(),
+          availableAt: new Date(insurance.startTime.add(insurance.lockTime) * 1000).toString(),
+          rawRepaid: new Amount(insurance.repaidRaw, 18).toHumanString(18),
+        });
     }
-    return userInsurances;
 
-    // return [
-    //   {
-    //     id: 123123,
-    //     raw_locked: 10,
-    //     locked_at: 2342134123123,
-    //     available_at: 1212312312312,
-    //     raw_repaid: 5,
-    //   },
-    // ];
+    return userInsurances;
   }
 
   _defineStateChangesCallback(

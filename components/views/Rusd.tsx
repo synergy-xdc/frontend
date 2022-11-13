@@ -225,22 +225,22 @@ const Staking: NextComponentType = () => {
 
         <Table.Column verticalAlign="middle" width={100} flexGrow={1}>
           <Table.HeaderCell>RAW Locked</Table.HeaderCell>
-          <Table.Cell dataKey="raw_locked" />
+          <Table.Cell dataKey="rawLocked" />
         </Table.Column>
 
         <Table.Column verticalAlign="middle" width={200} flexGrow={1}>
           <Table.HeaderCell>Locked At</Table.HeaderCell>
-          <Table.Cell dataKey="locked_at" />
+          <Table.Cell dataKey="lockedAt" />
         </Table.Column>
 
         <Table.Column verticalAlign="middle" width={150} flexGrow={1}>
           <Table.HeaderCell>Available At</Table.HeaderCell>
-          <Table.Cell dataKey="available_at" />
+          <Table.Cell dataKey="availableAt" />
         </Table.Column>
 
         <Table.Column verticalAlign="middle" width={150} flexGrow={1}>
           <Table.HeaderCell>RAW Repaid</Table.HeaderCell>
-          <Table.Cell dataKey="raw_repaid" />
+          <Table.Cell dataKey="rawRepaid" />
         </Table.Column>
 
         <Table.Column verticalAlign="middle" width={150} flexGrow={1}>
@@ -282,11 +282,11 @@ const Mint: NextComponentType = () => {
     rusdBalance ? rusdBalance : new Amount(BigNumber.from(0), 18)
   );
 
-  // const setNewWethAllowanceCallback =
-  //   networkProvider.getNewWethAllowanceCallback(
-  //     wethValue,
-  //     getStateHandlingCallback(toaster)
-  //   );
+  const setNewWethAllowanceCallback =
+    networkProvider.getNewWethAllowanceCallback(
+      wethValue,
+      getStateHandlingCallback(toaster)
+    );
   const mintCallback = networkProvider.getMintCallback(
     rusdValue,
     wethValue,
@@ -430,12 +430,7 @@ const Mint: NextComponentType = () => {
             parseFloat(wethValue?.toHumanString(18))
           }
           style={{ marginBottom: 7, borderWidth: 2 }}
-          onClick={async () =>
-            networkProvider.getNewWethAllowanceCallback(
-              wethValue,
-              getStateHandlingCallback(toaster)
-            )
-          }
+          onClick={async () => setNewWethAllowanceCallback()}
         >
           <b>Approve</b>
         </Button>
@@ -447,7 +442,7 @@ const Mint: NextComponentType = () => {
           }
           style={{ marginBottom: 7, borderWidth: 2 }}
           onClick={async () => {
-                console.log(123123); mintCallback()
+              console.log(123123); mintCallback()
             }
           }
         >

@@ -470,12 +470,16 @@ const Burn: NextComponentType = () => {
   const networkProvider = React.useContext(NetworkContext);
   const rusdBalance = networkProvider.getRusdBalance();
   const gasRokenBalance = networkProvider.getWethBalance();
-  const toaster = useToaster();
 
-
+  const rusdInsuranceAllowance = new Amount(BigNumber.from(0), 18);
   const [rusdValue, setRusdValue] = React.useState<Amount>(
     rusdBalance ? rusdBalance : new Amount(BigNumber.from(0), 18)
   );
+
+  const toaster = useToaster();
+
+
+
   const [wrappedGasTokenValue, setWrappedGasTokenValue] = React.useState<Amount>(
     gasRokenBalance ? gasRokenBalance : new Amount(BigNumber.from(0), 18)
   );
@@ -564,15 +568,39 @@ const Burn: NextComponentType = () => {
         </div>
       </Form.Group>
       <br />
-      <Button
-        color="orange"
-        appearance="ghost"
-        block
-        style={{ marginBottom: 7, borderWidth: 2 }}
-        onClick={async () => networkProvider.getBurnRusdCallback(rusdValue)}
-      >
-        <b>Burn rUSD</b>
-      </Button>
+      <ButtonGroup justified>
+        <Button
+          color="orange"
+          appearance="ghost"
+          disabled={
+            parseFloat(rusdInsuranceAllowance?.toHumanString(18)) >=
+            parseFloat(rusdValue?.toHumanString(18))
+          }
+          style={{ marginBottom: 7, borderWidth: 2 }}
+          onClick={async () =>
+            networkProvider.getNewWethAllowanceCallback(
+              rusdValue,
+              getStateHandlingCallback(toaster)
+            )
+          }
+        >
+          <b>Approve</b>
+        </Button>
+        <Button
+          color="orange"
+          appearance="ghost"
+          disabled={
+            parseFloat(rusdInsuranceAllowance?.toHumanString(18)) <
+            parseFloat(rusdValue?.toHumanString(18))
+          }
+          style={{ marginBottom: 7, borderWidth: 2 }}
+          onClick={async () =>
+            async () => networkProvider.getBurnRusdCallback(rusdValue)
+          }
+        >
+          <b>Burn rUSD</b>
+        </Button>
+      </ButtonGroup>
       <hr />
       <Form.Group controlId="_">
         <Form.ControlLabel>Unlock WETH</Form.ControlLabel>
@@ -604,6 +632,7 @@ const Burn: NextComponentType = () => {
               )
             }
           />
+
           <InputGroup.Button
             onClick={() =>
               setWrappedGasTokenValue(

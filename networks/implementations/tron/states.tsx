@@ -29,30 +29,34 @@ export const useTronContractCall = (
     args: any[] = []
 ): any | undefined => {
     const [response, setResponse] = React.useState<any>(undefined);
+    const [isFirstFetch, setIsFirstFetch] = React.useState<boolean>(true);
     const extension = getExtension();
 
     // const interval = setInterval(async () => {
     //     try {
     //         console.log(args);
     //         const contract = await extension?.contract(abi).at(address);
-    //         setResponse(contract[functionName](...args).call());
+    //         setResponse(await contract[functionName](...args).call());
     //         clearInterval(interval)
     //     } catch (err) {}
-    // }, 1000)
+    // }, 3000)
 
-    for (const arg of args) {
-        if (arg === undefined) {
-            return response;
-        }
-    }
-    useEffect(() => {
+    // if (address === undefined) {
+    //     return undefined;
+    // }
+    // for (const arg of args) {
+    //     if (arg === undefined) {
+    //         return response;
+    //     }
+    // }
+    if (address !== undefined && isFirstFetch) {
         extension?.contract(abi).at(address).then((contract: any) => {
             contract[functionName](...args).call().then((result: any) => {
+                setIsFirstFetch(false);
                 setResponse(result);
             }).catch((err: any) => console.log(err))
         }).catch((err: any) => console.log(err));
-    }, [response])
-
+    }
 
     return response;
 }

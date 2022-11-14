@@ -26,7 +26,6 @@ import {
 } from "@/components/WalletNotification";
 import { Amount, TXState } from "@/networks/base_old";
 import { BigNumber } from "ethers";
-import { Reload } from "@rsuite/icons";
 
 const UserRetableView_: NextComponentType = ({
   purpose,
@@ -102,25 +101,27 @@ const Staking: NextComponentType = () => {
   const [rawValue, setRawValue] = React.useState<Amount>(
     rawBalance ? rawBalance : new Amount(BigNumber.from(0), 18)
   );
-  const [insurancesList, setInsurancesList] = React.useState(networkProvider.getUserInssurances());
 
-  const default_date: Date = new Date(new Date().setMonth(new Date().getMonth() + 2))
+  const insurancesList = networkProvider.getUserInssurances();
 
-  const [unlockDate, setUnlockDate] = React.useState<Date | null>(default_date);
+  const defaultDate: Date = new Date(new Date().setMonth(new Date().getMonth() + 2))
+
+  const [unlockDate, setUnlockDate] = React.useState<Date>(defaultDate);
+
+  const toaster = useToaster();
+  const stakeCallback = networkProvider.stakeRawCallback(
+    rawValue,
+    unlockDate,
+    getStateHandlingCallback(toaster)
+  );
 
   return (
     <Panel bordered shaded header="Staking">
       <p>
-        Lorem ipsum dolor sit amet, consectetur adipiscing elit. Fusce vitae
-        lorem hendrerit, molestie purus nec, auctor nibh. Ut viverra mollis
-        varius. Donec mollis tincidunt suscipit. Vestibulum in orci at nulla
-        dignissim facilisis. Sed ex augue, cursus vitae odio nec, venenatis
-        sollicitudin metus. Nullam sollicitudin vestibulum ultrices. Praesent
-        diam mauris, pellentesque at ex id, lacinia luctus nisl. Nunc ex nisi,
-        finibus nec tincidunt vitae, viverra nec mauris. Sed porttitor eget
-        tortor id tristique. Integer tortor turpis, ultricies eget nunc et,
-        varius lobortis mi. Mauris quis libero nec est laoreet dignissim ac id
-        ex.
+      Stake RAW tokens to insure your collateral from debt pool losses. The longer the lock time, the greater the percentage of your insurance can be reimbursed (min 30 days, max 730 days). 
+      <br />
+      <br />
+      <span style={{color: "yellow"}}>WARNING: Insurance can be returned only after the expiration of the lock.</span>
       </p>
       <hr />
       <Form.Group controlId="_">
@@ -178,6 +179,7 @@ const Staking: NextComponentType = () => {
           format="yyyy-MM-dd"
           ranges={[]}
           block
+          defaultValue={defaultDate}
           onChange={setUnlockDate}
         />
         <Form.HelpText>RAW insurance: TODO</Form.HelpText>
@@ -188,12 +190,7 @@ const Staking: NextComponentType = () => {
         appearance="primary"
         color="green"
         block
-        onClick={async () =>
-          networkProvider.getStakeCallback(
-            rawValue,
-            unlockDate
-          )
-        }
+        onClick={async () => stakeCallback()}
       >
         <b>Stake</b>
       </Button>
@@ -203,7 +200,7 @@ const Staking: NextComponentType = () => {
         autoHeight
         style={{ borderRadius: 10 }}
         cellBordered
-        virtualized
+        
         data={insurancesList}
         renderEmpty={() => (
           <span style={{ alignContent: "center" }}>
@@ -245,16 +242,7 @@ const Staking: NextComponentType = () => {
 
         <Table.Column verticalAlign="middle" width={150} flexGrow={1}>
           <Table.HeaderCell>#</Table.HeaderCell>
-          <Table.Cell dataKey="unstake">
-            <Button
-              style={{ borderWidth: 2 }}
-              color="red"
-              appearance="ghost"
-              block
-            >
-              Unstake
-            </Button>
-          </Table.Cell>
+          <Table.Cell dataKey="unstakeButton" />
         </Table.Column>
       </Table>
     </Panel>
@@ -297,26 +285,10 @@ const Mint: NextComponentType = () => {
     <Panel
       bordered
       shaded
-      // header="Mint rUSD"
-      header={
-        <Stack justifyContent="space-between">
-          <span>Report Title</span>
-          <ButtonGroup>
-            {/* <Button active>Day</Button> */}
-            <IconButton icon={<Reload />}> Reload </IconButton>
-          </ButtonGroup>
-        </Stack>
-      }
+      header="Mint rUSD"
     >
       <p>
-        In molestie sem est, vitae blandit justo vestibulum in. Quisque lacinia
-        quam et erat pellentesque iaculis. Cras fermentum sagittis nisl, vel
-        dignissim arcu accumsan ut. Ut ipsum nulla, convallis at arcu ut,
-        aliquam lobortis mauris. Nunc tristique lacinia tortor, ac volutpat
-        tortor. Proin ullamcorper posuere blandit. Nam ut lobortis massa.
-        Aliquam a vestibulum mi, in tincidunt ex. Phasellus viverra, tellus ac
-        ullamcorper eleifend, est enim condimentum felis, sit amet bibendum
-        purus nisl eget sapien.
+      Deposit WTRX as a collateral and get rUSD in return. Resulting collateral ratio should be greater than min collateral ratio
       </p>
       <hr />
       <Form.Group controlId="_">
@@ -464,27 +436,24 @@ const Burn: NextComponentType = () => {
   );
 
   const toaster = useToaster();
-
-
-
   const [wrappedGasTokenValue, setWrappedGasTokenValue] = React.useState<Amount>(
     gasRokenBalance ? gasRokenBalance : new Amount(BigNumber.from(0), 18)
   );
 
-  const [insuranceId, setInsuranceId] = React.useState<string>("0");
+  const [insuranceId, setInsuranceId] = React.useState<string | null>(null);
+  const userInsurances = networkProvider.getUserInssurances();
+
+  const burnCallback = networkProvider.getBurnRusdCallback(
+    rusdValue,
+    insuranceId ? insuranceId : "0x0000000000000000000000000000000000000000000000000000000000000000",
+    getStateHandlingCallback(toaster)
+  );
 
 
   return (
     <Panel bordered shaded header="Burn rUSD">
       <p>
-        In molestie sem est, vitae blandit justo vestibulum in. Quisque lacinia
-        quam et erat pellentesque iaculis. Cras fermentum sagittis nisl, vel
-        dignissim arcu accumsan ut. Ut ipsum nulla, convallis at arcu ut,
-        aliquam lobortis mauris. Nunc tristique lacinia tortor, ac volutpat
-        tortor. Proin ullamcorper posuere blandit. Nam ut lobortis massa.
-        Aliquam a vestibulum mi, in tincidunt ex. Phasellus viverra, tellus ac
-        ullamcorper eleifend, est enim condimentum felis, sit amet bibendum
-        purus nisl eget sapien.
+      Burn rUSD to increase your collateral ratio and get ability to withdraw collateral in wTRX. You can choose insurance to repay your debt pool losses in RAW.
       </p>
       <hr />
       <Form.Group controlId="_">
@@ -541,54 +510,35 @@ const Burn: NextComponentType = () => {
         <div style={{ marginTop: 5, marginBottom: 5 }}>
           <SelectPicker
             label="Insurance"
-            data={[
-              {
-                "label": "Empty",
-                "value": "0"
-              }
-            ]}
+            data={
+              userInsurances.map(
+                (elem) => ({
+                  label: `${elem.id.slice(0, 6)}... (+${elem.availableCompensation?.toHumanString(4)} RAW)`,
+                  value: elem.id
+                })
+              )
+            }
             onChange={setInsuranceId}
-            cleanable={false}
             block
-            defaultValue={"0"}
+            defaultValue={"0x0000000000000000000000000000000000000000000000000000000000000000"}
           />
         </div>
       </Form.Group>
       <br />
-      <ButtonGroup justified>
-        <Button
-          color="orange"
-          appearance="ghost"
-          disabled={
-            parseFloat(rusdInsuranceAllowance?.toHumanString(18)) >=
-            parseFloat(rusdValue?.toHumanString(18))
-          }
-          style={{ marginBottom: 7, borderWidth: 2 }}
-          onClick={async () =>
-            networkProvider.getNewWethAllowanceCallback(
-              rusdValue,
-              getStateHandlingCallback(toaster)
-            )
-          }
-        >
-          <b>Approve</b>
-        </Button>
-        <Button
-          color="orange"
-          appearance="ghost"
-          disabled={
-            parseFloat(rusdInsuranceAllowance?.toHumanString(18)) <
-            parseFloat(rusdValue?.toHumanString(18))
-          }
-          style={{ marginBottom: 7, borderWidth: 2 }}
-          onClick={async () =>
-            async () => networkProvider.getBurnRusdCallback(rusdValue)
-          }
-        >
-          <b>Burn rUSD</b>
-        </Button>
-      </ButtonGroup>
+      <Button
+        color="orange"
+        appearance="ghost"
+        block
+        style={{ marginBottom: 7, borderWidth: 2 }}
+        onClick={async () => burnCallback()}
+      >
+        <b>Burn rUSD</b>
+      </Button>
       <hr />
+      <p>
+      Withdraw wTRX collateral (this decreases collateral ratio).
+      </p>
+      <br />
       <Form.Group controlId="_">
         <Form.ControlLabel>Unlock WETH</Form.ControlLabel>
         <InputGroup style={{ marginTop: 5, marginBottom: 5 }}>

@@ -4,9 +4,9 @@ import Amount from "@/networks/base/amount";
 import TXState from "@/networks/base/txstate";
 
 import { ReactNode, useEffect, useState } from "react";
-import { BigNumber, Bytes, utils } from "ethers";
+import { BigNumber, Bytes, Contract, utils } from "ethers";
 import React from "react";
-import { Button } from "rsuite";
+import { Button, useToaster } from "rsuite";
 import {
     triggerSmartContract,
     sign,
@@ -28,8 +28,7 @@ import OracleABI from "@/abi/Oracle.json";
 import WethABI from "@/abi/WETH.json";
 import InsuranceABI from "@/abi/Insurance.json";
 
-import type { TronWeb } from "tronweb-typings";
-import { isUndefined } from "util";
+import { getStateHandlingCallback } from "@/components/WalletNotification";
 
 const AbiCoder = utils.AbiCoder;
 const ADDRESS_PREFIX = "41";
@@ -60,6 +59,7 @@ const AvailableSynth: Synth[] = [
 ];
 
 class TronNetwork extends BaseNetwork {
+
     connectButton(): ReactNode {
         return (
         <Button
@@ -89,29 +89,6 @@ class TronNetwork extends BaseNetwork {
             };
         }
     }
-
-  async decodeParams(types: any, output: any, ignoreMethodHash: any) {
-    if (!output || typeof output === "boolean") {
-      ignoreMethodHash = output;
-      output = types;
-    }
-
-    if (ignoreMethodHash && output.replace(/^0x/, "").length % 64 === 8)
-      output = "0x" + output.replace(/^0x/, "").substring(8);
-
-    const abiCoder = new AbiCoder();
-
-    if (output.replace(/^0x/, "").length % 64)
-      throw new Error(
-        "The encoded string is not valid. Its length must be a multiple of 64."
-      );
-    return abiCoder.decode(types, output).reduce((obj, arg, index) => {
-      if (types[index] == "address")
-        arg = ADDRESS_PREFIX + arg.substr(2).toLowerCase();
-      obj.push(arg);
-      return obj;
-    }, []);
-  }
 
     getRusdBalance(): Amount | undefined {
         const selfAddress = useSelfTronAddress();
@@ -223,42 +200,17 @@ class TronNetwork extends BaseNetwork {
     }
 
   getMinCRatio(): number | undefined {
-    const [amount, setAmount] = useState();
-
-    useEffect(() => {
-      const getAmount = async () => {
-        const HexSynergyTRONAddress =
-          window.tronWeb.address.toHex(SynergyTRONAddress);
-        const HexUserAddress = window.tronWeb.address.toHex(
-          window.tronWeb.defaultAddress.base58
-        );
-        const synergyMinCollateralRatioCall =
-          await window.tronWeb.transactionBuilder.triggerConstantContract(
-            HexSynergyTRONAddress,
-            "minCollateralRatio()",
-            {},
-            [],
-            HexUserAddress
-          );
-
-        const synergyMinCollateralRatio =
-          synergyMinCollateralRatioCall["constant_result"][0];
-
-        const synergyMinCollateralRatioDecoded = await this.decodeParams(
-          ["uint32"],
-          "0x" + synergyMinCollateralRatio,
-          false
+        const selfAddress = useSelfTronAddress();
+        const cration: number | undefined = useTronContractCall(
+            SynergyTRONAddress,
+            SynergyABI,
+            "minCollateralRatio",
         );
 
-        const amount: any =
-          (synergyMinCollateralRatioDecoded[0] / 10 ** 8) * 100;
-        setAmount(amount);
-      };
-
-      getAmount();
-    }, []);
-
-    return amount;
+        if (cration !== undefined) {
+            return cration / 10 ** 6
+        }
+        return cration
   }
 
   getNewWethAllowanceCallback(
@@ -301,7 +253,7 @@ class TronNetwork extends BaseNetwork {
             "predictCollateralRatio",
             [selfAddress?.base58, amountToMint.amount, amountToPledge.amount, increase]
         );
-        console.log(newCratio)
+        console.log("NEW CRATIO", newCratio)
 
         if (newCratio !== undefined) {
             return newCratio.div(BigNumber.from(10).pow(6)).toNumber()
@@ -335,20 +287,22 @@ class TronNetwork extends BaseNetwork {
 
     getBurnRusdCallback(
         amountToBurn: Amount,
+        insuranceId: string, 
         tx_state_changes_callback: (state: TXState) => void
-    ): void {
+    ): Function {
+        console.log()
         const cb = useTronContractWrite(
             SynergyTRONAddress,
             SynergyABI,
             "burn",
             () => tx_state_changes_callback(TXState.AwaitWalletConfirmation),
             () => tx_state_changes_callback(TXState.Success),
-            [amountToBurn.amount]
+            [amountToBurn.amount, insuranceId]
         );
         useTronEvents(
             SynergyTRONAddress,
             SynergyABI,
-            "Minted",
+            "Burned",
             (err: any, event: any) => {
                 console.log(err, event);
             }
@@ -356,43 +310,13 @@ class TronNetwork extends BaseNetwork {
         return cb;
     }
 
-  getStakeCallback(amount: Amount, date: Date) {
-    const today: Date = new Date();
-
-    let lockTime = BigNumber.from(Math.round((date - today) / 1000));
-
-    const stake = async () => {
-      const HexInsuranceTRONAddress =
-        window.tronWeb.address.toHex(InsuranceTRONAddress);
-      const HexUserAddress = window.tronWeb.address.toHex(
-        window.tronWeb.defaultAddress.base58
-      );
-      const stakeCall = await triggerSmartContract(
-        HexInsuranceTRONAddress,
-        "stakeRaw(uint256,uint256)",
-        {},
-        [
-          {
-            type: "uint256",
-            value: lockTime,
-          },
-          {
-            type: "uint256",
-            value: amount.amount,
-          },
-        ]
-      );
-      const signedTransaction = await sign(stakeCall);
-      const result = await sendRawTransaction(signedTransaction);
-    };
-
-    stake();
-  }
 
   getUserInssurances(): FrontendUserInsurance[] {
     const selfAddress = useSelfTronAddress();
+    const extension = getExtension();
 
     const [userInsurances, setUserInsurances] = React.useState<FrontendUserInsurance[]>([]);
+
 
     const insuranceAddress: string | undefined = useTronContractCall(
         SynergyTRONAddress,
@@ -400,53 +324,107 @@ class TronNetwork extends BaseNetwork {
         "insurance"
     );
 
-    const insuranceId: string | undefined = useTronContractCall(
-        insuranceAddress,
-        InsuranceABI,
-        "userInsurances",
-        [selfAddress?.base58, userInsurances.length]
-    );
+    const toaster = useToaster();
 
-    const insurance: ContractUserInsurance = useTronContractCall(
-        insuranceAddress,
-        InsuranceABI,
-        "insurances",
-        [insuranceId]
-    );
-
-    if (insurance !== undefined) {
-        userInsurances.push({
-          id: insuranceId,
-          rawLocked: new Amount(insurance.stakedRaw, 18).toHumanString(4),
-          lockedAt: new Date(insurance.startTime.toNumber() * 1000).toString(),
-          availableAt: new Date(insurance.startTime.add(insurance.lockTime) * 1000).toString(),
-          rawRepaid: new Amount(insurance.repaidRaw, 18).toHumanString(18),
-        });
-    }
+    useEffect(() => {
+        const fetchInsurances = async () => {
+            if (insuranceAddress !== undefined) {
+                const insuranceContract = await extension?.contract(InsuranceABI).at(insuranceAddress);
+                let insuranceIndex = 0;
+                while (true) {
+                    try {
+                        const insuranceId: string = await insuranceContract.userInsurances(selfAddress?.base58, insuranceIndex).call();
+                        const insurance: ContractUserInsurance = await insuranceContract.insurances(insuranceId).call();
+                        const availableCompensation = await insuranceContract.availableCompensation(insuranceId).call();
+                        console.log("compensation", availableCompensation)
+                        if (!userInsurances.find(obj => obj.id === insuranceId)) {
+                            console.log(insuranceId, typeof insuranceId)
+                            userInsurances.push({
+                                id: insuranceId,
+                                rawLocked: new Amount(insurance.stakedRaw, 18).toHumanString(4),
+                                lockedAt: new Date(insurance.startTime.toNumber() * 1000).toString(),
+                                availableAt: new Date(insurance.startTime.add(insurance.lockTime) * 1000).toString(),
+                                rawRepaid: new Amount(insurance.repaidRaw, 18).toHumanString(18),
+                                availableCompensation: new Amount(availableCompensation, 18),
+                                unstakeButton: <Button
+                                    style={{ borderWidth: 2 }}
+                                    color="red"
+                                    appearance="ghost"
+                                    block
+                                    disabled={Date.now() / 1000 < insurance.startTime.toNumber() + insurance.lockTime.toNumber()}
+                                    onClick={async (event) => await this.unstakeCallback(insuranceId, getStateHandlingCallback(toaster))}
+                                >
+                                    Unstake
+                                </Button>
+                            });
+                        }
+                        insuranceIndex++;
+                    } catch (err) {
+                        console.error(err)
+                        break
+                    }
+                }
+            }
+        }
+        fetchInsurances()
+    }, [insuranceAddress])
+    
 
     return userInsurances;
   }
 
-  _defineStateChangesCallback(
-    isWaiting: boolean,
-    isLoading: boolean,
-    currentState: TXState
-  ): TXState {
-    switch ([isWaiting, isLoading, currentState].toString()) {
-      case [false, true, TXState.Done].toString():
-        return TXState.AwaitWalletConfirmation;
-      case [false, true, TXState.AwaitWalletConfirmation].toString():
-        return TXState.AwaitWalletConfirmation;
-      case [false, false, TXState.AwaitWalletConfirmation].toString():
-        return TXState.Broadcasting;
-      case [true, false, TXState.Success].toString():
-        return TXState.Done;
-      case [false, false, TXState.Done].toString():
-        return TXState.Done;
-      default:
-        return currentState;
+    stakeRawCallback(
+        amountToStake: Amount,
+        expireAt: Date,
+        tx_state_changes_callback: (state: TXState) => void
+    ): Function {
+        const insuranceContractAddress: string | undefined = useTronContractCall(
+            SynergyTRONAddress,
+            SynergyABI,
+            "insurance"
+        )
+
+        const timeDelta = expireAt.getTime() - Date.now();
+
+        console.log("write args", timeDelta, amountToStake.amount)
+        const cb = useTronContractWrite(
+            insuranceContractAddress,
+            InsuranceABI,
+            "stakeRaw",
+            () => tx_state_changes_callback(TXState.AwaitWalletConfirmation),
+            () => tx_state_changes_callback(TXState.Success),
+            [Math.round(timeDelta / 1000), amountToStake.amount]
+        );
+        useTronEvents(
+            SynergyTRONAddress,
+            SynergyABI,
+            "Staked",
+            (err: any, event: any) => {
+                console.log(err, event);
+            }
+        );
+        return cb;
+
     }
-  }
+
+    async unstakeCallback(
+        insuranceId: string,
+        tx_state_changes_callback: (state: TXState) => void,
+    ): void {
+        const extension = getExtension();
+        tx_state_changes_callback(TXState.AwaitWalletConfirmation)
+        const synerdyContract = await extension.contract(SynergyABI).at(SynergyTRONAddress);
+        const insuranceContractAddress = await synerdyContract.insurance().call();
+        const insuranceContract = await extension.contract(InsuranceABI).at(insuranceContractAddress);
+        await insuranceContract.unstakeRaw(
+            insuranceId
+        ).send({
+            feeLimit: 100_000_000,
+            callValue: 0,
+            shouldPollResponse: false
+        })
+        tx_state_changes_callback(TXState.Success)
+    }
 }
 
 export default TronNetwork;

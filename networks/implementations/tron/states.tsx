@@ -79,12 +79,21 @@ export const useTronEvents  = (
     cb: (err: any, event: any) => void
 ): void => {
     const extension = getExtension();
-    extension?.contract(abi).at(address).then((contract: any) => {
-        contract[eventName]().watch((err, event) => {
-            console.log("EVENT", err, event)
-            cb(err, event)
-        }).then((res) => console.log("EVENT PROMISE", res));
-    }).catch((err: any) => console.log(err));
+    const [isFirstFetch, setIsFirstFetch] = React.useState<boolean>(true);
+
+
+    if (isFirstFetch) {
+        setIsFirstFetch(false)
+        extension?.contract(abi).at(address).then((contract: any) => {
+            contract[eventName]().watch((err: any, event: any) => {
+                console.log("EVENT", err, event)
+                cb(err, event)
+            }).then((res: any) => {
+                console.log("EVENT PROMISE", res)
+            });
+        }).catch((err: any) => console.log(err));
+    }
+
 }
 
 export const useSelfTronAddress = (): {

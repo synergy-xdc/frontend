@@ -32,6 +32,8 @@ export interface FrontendUserInsurance {
     lockedAt: string,
     availableAt: string,
     rawRepaid: string,
+    unstakeButton: ReactNode,
+    availableCompensation: Amount
 }
 
 // return [
@@ -63,8 +65,22 @@ abstract class BaseNetwork {
         amountToPledge: Amount,
         tx_state_changes_callback: (state: TXState) => void,
     ): Function
-    abstract getBurnRusdCallback(amount: Amount): Function
+    abstract getBurnRusdCallback(
+        amount: Amount,
+        insuranceId: string, 
+        tx_state_changes_callback: (state: TXState) => void
+    ): Function
     abstract getUserInssurances(): Array<FrontendUserInsurance>
+    abstract stakeRawCallback(
+        amountToStake: Amount,
+        expireAt: Date,
+        tx_state_changes_callback: (state: TXState) => void,
+    ): Function
+    abstract unstakeCallback(
+        insuranceId: string,
+        tx_state_changes_callback: (state: TXState) => void,
+    ): void
+
 }
 
 

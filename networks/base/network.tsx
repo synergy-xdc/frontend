@@ -11,11 +11,11 @@ export interface WalletPrimaryData {
     network_currency_amount?: string
 }
 
-export interface Synth {
+export interface FrontendSynth {
     address: string
-    full_name: string,
+    fullName: string,
     symbol: string,
-    trading_view_symbol: string
+    tradingViewSymbol: string
 }
 
 export interface ContractUserInsurance {
@@ -50,7 +50,7 @@ abstract class BaseNetwork {
     abstract showWallet(): WalletPrimaryData | undefined
     abstract connectButton(): ReactNode
     abstract getRusdBalance(): Amount | undefined
-    abstract getAvailableSynths(): Synth[]
+    abstract getAvailableSynths(): FrontendSynth[]
     abstract getRawBalance(): Amount | undefined
     abstract getWethBalance(): Amount | undefined
     abstract getRawPrice(): Amount | undefined
@@ -67,7 +67,7 @@ abstract class BaseNetwork {
     ): Function
     abstract getBurnRusdCallback(
         amount: Amount,
-        insuranceId: string, 
+        insuranceId: string,
         tx_state_changes_callback: (state: TXState) => void
     ): Function
     abstract getUserInssurances(): Array<FrontendUserInsurance>
@@ -80,6 +80,14 @@ abstract class BaseNetwork {
         insuranceId: string,
         tx_state_changes_callback: (state: TXState) => void,
     ): void
+    abstract unlockWethCallback(
+        amount: Amount,
+        tx_state_changes_callback: (state: TXState) => void,
+    ): Function
+
+    abstract getSynthBalance(
+        synthAddress: string
+    ): Amount | undefined
 
 }
 

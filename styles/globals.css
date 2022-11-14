@@ -45,3 +45,22 @@ a {
   background: linear-gradient(transparent, #1d5f5e);
   border-radius: 5px;
 }
+
+
+.video-responsive {
+  overflow: hidden;
+  padding-bottom: 56.25%;
+  position: relative;
+  height: 0;
+  align-items: center;
+  display: flex;
+  justify-content: center;
+}
+
+.video-responsive iframe {
+  top: 0;
+  height: 80%;
+  width: 80%;
+  padding: 50px;
+  position: absolute;
+}

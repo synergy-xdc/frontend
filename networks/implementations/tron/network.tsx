@@ -1,18 +1,12 @@
 
-import BaseNetwork, { ContractUserInsurance, FrontendUserInsurance, Synth, WalletPrimaryData } from "@/networks/base/network";
+import BaseNetwork, { ContractUserInsurance, FrontendUserInsurance, FrontendSynth, WalletPrimaryData } from "@/networks/base/network";
 import Amount from "@/networks/base/amount";
 import TXState from "@/networks/base/txstate";
 
 import { ReactNode, useEffect, useState } from "react";
-import { BigNumber, Bytes, Contract, utils } from "ethers";
+import { BigNumber } from "ethers";
 import React from "react";
 import { Button, useToaster } from "rsuite";
-import {
-    triggerSmartContract,
-    sign,
-    sendRawTransaction,
-    // MAX_UINT256,
-} from "@/networks/utils/tron-utils";
 import {
     getExtension,
     useSelfTronAddress,
@@ -25,38 +19,21 @@ import RawABI from "@/abi/RAW.json";
 import RusdABI from "@/abi/RUSD.json";
 import SynergyABI from "@/abi/Synergy.json";
 import OracleABI from "@/abi/Oracle.json";
+import SynterABI from "@/abi/Synter.json";
 import WethABI from "@/abi/WETH.json";
 import InsuranceABI from "@/abi/Insurance.json";
+import SyntABI from "@/abi/Synt.json";
 
 import { getStateHandlingCallback } from "@/components/WalletNotification";
 
-const AbiCoder = utils.AbiCoder;
-const ADDRESS_PREFIX = "41";
 
-// // const foo = new TronWeb();
-// declare global {
-//   interface Window {
-//     tronWeb?: (TronWeb & typeof TronWeb) | undefined;
-//   }
-// }
+const tradingViewSymbols = {
+    rGLD: "GOLD",
+    rGAS: "GAS"
+}
 
-// const SynergyAddress: string = "0x2f6F4493bb82f00Ed346De9353EF22cA277b7680";
+
 const SynergyTRONAddress: string = "TVmQ81jx8v5jT4u6qKkGdajnBKZTA7UJUg";
-
-const AvailableSynth: Synth[] = [
-    {
-        address: "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2",
-        full_name: "Gold",
-        symbol: "GOLD",
-        trading_view_symbol: "GOLD",
-    },
-    {
-        address: "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2",
-        full_name: "Silver",
-        symbol: "SILVER",
-        trading_view_symbol: "SILVER",
-    },
-];
 
 class TronNetwork extends BaseNetwork {
 
@@ -65,6 +42,7 @@ class TronNetwork extends BaseNetwork {
         <Button
             style={{ backgroundColor: "linear-gradient(transparent, #089a81)" }}
             appearance="primary"
+            onClick={() => this.getRusdBalance()}
         >
             Connect Wallet
         </Button>
@@ -180,10 +158,6 @@ class TronNetwork extends BaseNetwork {
     return undefined;
   }
 
-  getAvailableSynths(): Synth[] {
-    return AvailableSynth;
-  }
-
     getCurrentCRatio(): number | undefined {
         const selfAddress = useSelfTronAddress();
         const cration: number | undefined = useTronContractCall(
@@ -287,10 +261,9 @@ class TronNetwork extends BaseNetwork {
 
     getBurnRusdCallback(
         amountToBurn: Amount,
-        insuranceId: string, 
+        insuranceId: string,
         tx_state_changes_callback: (state: TXState) => void
     ): Function {
-        console.log()
         const cb = useTronContractWrite(
             SynergyTRONAddress,
             SynergyABI,
@@ -316,7 +289,8 @@ class TronNetwork extends BaseNetwork {
     const extension = getExtension();
 
     const [userInsurances, setUserInsurances] = React.useState<FrontendUserInsurance[]>([]);
-
+    const [userInsurancesIndex, setUserInsurancesIndex] = React.useState<number>(0);
+    const [userInsurancesFetched, setUserInsurancesFetched] = React.useState<boolean>(false);
 
     const insuranceAddress: string | undefined = useTronContractCall(
         SynergyTRONAddress,
@@ -328,15 +302,13 @@ class TronNetwork extends BaseNetwork {
 
     useEffect(() => {
         const fetchInsurances = async () => {
-            if (insuranceAddress !== undefined) {
+            if (insuranceAddress !== undefined && !userInsurancesFetched) {
                 const insuranceContract = await extension?.contract(InsuranceABI).at(insuranceAddress);
-                let insuranceIndex = 0;
                 while (true) {
                     try {
-                        const insuranceId: string = await insuranceContract.userInsurances(selfAddress?.base58, insuranceIndex).call();
+                        const insuranceId: string = await insuranceContract.userInsurances(selfAddress?.base58, userInsurancesIndex).call();
                         const insurance: ContractUserInsurance = await insuranceContract.insurances(insuranceId).call();
                         const availableCompensation = await insuranceContract.availableCompensation(insuranceId).call();
-                        console.log("compensation", availableCompensation)
                         if (!userInsurances.find(obj => obj.id === insuranceId)) {
                             console.log(insuranceId, typeof insuranceId)
                             userInsurances.push({
@@ -358,20 +330,105 @@ class TronNetwork extends BaseNetwork {
                                 </Button>
                             });
                         }
-                        insuranceIndex++;
+                        setUserInsurancesIndex(userInsurancesIndex + 1);
                     } catch (err) {
                         console.error(err)
+                        setUserInsurancesFetched(true)
                         break
                     }
                 }
             }
         }
         fetchInsurances()
-    }, [insuranceAddress])
-    
+    }, [userInsurancesIndex, insuranceAddress])
+
 
     return userInsurances;
   }
+
+    getAvailableSynths(): FrontendSynth[] {
+        // const selfAddress = useSelfTronAddress();
+        // const extension = getExtension();
+
+        // const [availableSynths, setAvailableSynths] = React.useState<FrontendSynth[]>([]);
+        // const [availableSynthIndex, setAvailableSynthIndex] = React.useState<number>(0);
+        // const [synthsFetched, setSynthsFetched] = React.useState<boolean>(false);
+        // const synterAddress: string | undefined = useTronContractCall(
+        //     SynergyTRONAddress,
+        //     SynergyABI,
+        //     "synter"
+        // )
+        // console.log("SYNTER", synterAddress)
+
+        // useEffect(() => {
+        //     const fetchSynths = async () => {
+        //         if (synterAddress !== undefined && !synthsFetched) {
+        //             console.log("syntaddres", 1)
+        //             const synterContract = await extension?.contract(SynterABI).at(synterAddress);
+
+        //             while (true) {
+        //                 try {
+        //                     const synthContractAddress: string = await synterContract.syntList(availableSynthIndex).call();
+        //                     console.log("syntaddres", synthContractAddress)
+        //                     const synthContract = await extension?.contract(SyntABI).at(synthContractAddress);
+        //                     const synthName: string = await synthContract.name().call();
+        //                     const synthSymbol: string = await synterContract.symbol().call();
+        //                     console.log("syntaddres", synthContractAddress)
+        //                     if (!availableSynths.find(obj => obj.address === synthContractAddress)) {
+        //                         availableSynths.push({
+        //                             address: synthContractAddress,
+        //                             fullName: synthName,
+        //                             symbol: synthSymbol,
+        //                             tradingViewSymbol: tradingViewSymbols[synthSymbol]
+        //                         });
+        //                     }
+        //                     setAvailableSynthIndex(availableSynthIndex + 1)
+        //                 } catch (err) {
+        //                     console.error(err)
+        //                     setSynthsFetched(true)
+        //                     break
+        //                 }
+        //             }
+        //         }
+        //     }
+        //     fetchSynths()
+        // }, [availableSynths, availableSynthIndex])
+
+
+        // return availableSynths;
+
+        return [
+            {
+                address: "TJ9acewm9Li9utY6GxK7e4qDvaRMY72uGk",
+                fullName: "rGOLD",
+                symbol: "rGOLD",
+                tradingViewSymbol: "GOLD"
+            },
+            {
+                address: "TPnsQ24CqjY5ZkQ9Qy1i6jhwNLbxDcct2w",
+                fullName: "rGAS",
+                symbol: "rGAS",
+                tradingViewSymbol: "NATURALGAS"
+            }
+        ]
+    }
+
+    getSynthBalance(synthAddress: string): Amount | undefined {
+        const selfAddress = useSelfTronAddress();
+        const balance: BigNumber | undefined = useTronContractCall(
+            synthAddress,
+            SyntABI,
+            "balanceOf",
+            [selfAddress?.base58]
+        )
+
+        console.log(synthAddress, balance);
+
+        if (balance !== undefined) {
+            return new Amount(balance, 18)
+        }
+        return undefined;
+    }
 
     stakeRawCallback(
         amountToStake: Amount,
@@ -386,7 +443,6 @@ class TronNetwork extends BaseNetwork {
 
         const timeDelta = expireAt.getTime() - Date.now();
 
-        console.log("write args", timeDelta, amountToStake.amount)
         const cb = useTronContractWrite(
             insuranceContractAddress,
             InsuranceABI,
@@ -410,12 +466,12 @@ class TronNetwork extends BaseNetwork {
     async unstakeCallback(
         insuranceId: string,
         tx_state_changes_callback: (state: TXState) => void,
-    ): void {
+    ): Promise<any> {
         const extension = getExtension();
         tx_state_changes_callback(TXState.AwaitWalletConfirmation)
-        const synerdyContract = await extension.contract(SynergyABI).at(SynergyTRONAddress);
+        const synerdyContract = await extension?.contract(SynergyABI).at(SynergyTRONAddress);
         const insuranceContractAddress = await synerdyContract.insurance().call();
-        const insuranceContract = await extension.contract(InsuranceABI).at(insuranceContractAddress);
+        const insuranceContract = await extension?.contract(InsuranceABI).at(insuranceContractAddress);
         await insuranceContract.unstakeRaw(
             insuranceId
         ).send({
@@ -424,6 +480,29 @@ class TronNetwork extends BaseNetwork {
             shouldPollResponse: false
         })
         tx_state_changes_callback(TXState.Success)
+    }
+
+    unlockWethCallback(
+      amount: Amount,
+      tx_state_changes_callback: (state: TXState) => void,
+    ): Function {
+        const cb = useTronContractWrite(
+            SynergyTRONAddress,
+            SynergyABI,
+            "withdraw",
+            () => tx_state_changes_callback(TXState.AwaitWalletConfirmation),
+            () => tx_state_changes_callback(TXState.Success),
+            [amount.amount]
+        );
+        useTronEvents(
+            SynergyTRONAddress,
+            SynergyABI,
+            "Withdrawed",
+            (err: any, event: any) => {
+                console.log(err, event);
+            }
+        );
+        return cb;
     }
 }
 

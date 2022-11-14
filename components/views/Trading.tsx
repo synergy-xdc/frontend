@@ -18,12 +18,6 @@ import {
   Table,
 } from "rsuite";
 
-const Pairs = ["GOLD", "SILVER"].map((item) => ({ label: item, value: item }));
-
-const Synths = ["GOLD", "SILVER", "rUSD"].map((item) => ({
-  label: item,
-  value: item,
-}));
 
 const ActivePositionsPlaceholder = [
   {
@@ -107,8 +101,21 @@ const TradeThePair: NextComponentType = () => {
 };
 
 const SwapSynthes: NextComponentType = () => {
-  const [fromSynth, setFromSynth] = React.useState<string>("GOLD");
-  const [toSynth, setToSynth] = React.useState<string>("rUSD");
+  const networkProvider = React.useContext(NetworkContext);
+
+  const availableSynths = networkProvider.getAvailableSynths();
+  availableSynths.push({
+    address: "TFQ8iSyJs6ooYo8YxJYtQnGt22FqyMCX8a",
+    fullName: "rUSD",
+    symbol: "rUSD",
+    tradingViewSymbol: "-"
+  })
+
+  const [fromSynth, setFromSynth] = React.useState<string>(availableSynths[0].address);
+  const [toSynth, setToSynth] = React.useState<string>(availableSynths[availableSynths.length - 1].address);
+
+  const synthFromBalance = networkProvider.getSynthBalance(fromSynth);
+  const synthToBalance = networkProvider.getSynthBalance(toSynth);
 
   return (
     <Panel bordered shaded header="Swap Synthes">
@@ -120,15 +127,19 @@ const SwapSynthes: NextComponentType = () => {
             <SelectPicker
               size="sm"
               label="Synth"
-              data={Synths}
+              data={
+                availableSynths.map((elem) => ({
+                  label: elem.fullName,
+                  value: elem.address
+                }))
+              }
               // style={{ width: 300, minWidth: 250, }}
-              onChange={(val) => setFromSynth(parseInt(val))}
-              cleanable={false}
-              defaultValue={fromSynth}
+              onChange={(val) => setFromSynth(val)}
+              defaultValue={availableSynths[0].address}
             />
           </InputGroup.Button>
         </InputGroup>
-        <Form.HelpText>Balance: 223.2343</Form.HelpText>
+        <Form.HelpText>Balance: {synthFromBalance?.toHumanString(5)}</Form.HelpText>
       </Form.Group>
       <br />
       <Form.Group controlId="_">
@@ -138,15 +149,19 @@ const SwapSynthes: NextComponentType = () => {
             <SelectPicker
               size="sm"
               label="Synth"
-              data={Synths}
+              data={
+                availableSynths.map((elem) => ({
+                  label: elem.fullName,
+                  value: elem.address
+                }))
+              }
               // style={{ width: 300, minWidth: 250, }}
-              onChange={(val) => setToSynth(parseInt(val))}
-              cleanable={false}
-              defaultValue={toSynth}
+              onChange={(val) => setToSynth(val)}
+              defaultValue={availableSynths[availableSynths.length - 1].address}
             />
           </InputGroup.Button>
         </InputGroup>
-        <Form.HelpText>Balance: 2342.32</Form.HelpText>
+        <Form.HelpText>Balance: {synthToBalance?.toHumanString(5)}</Form.HelpText>
       </Form.Group>
 
       <br />
@@ -159,7 +174,7 @@ const SwapSynthes: NextComponentType = () => {
         <b>Swap</b>
       </Button>
       <Form.HelpText>
-        Price: 2323.33 ({toSynth} in {fromSynth})
+        Price: 2323.33 ({availableSynths.find(elem => elem.address === toSynth)?.fullName} in {availableSynths.find(elem => elem.address === fromSynth)?.fullName})
       </Form.HelpText>
     </Panel>
   );
@@ -224,7 +239,9 @@ const ActiveOrdersTable: NextComponentType = () => {
 };
 
 const TradingView: NextComponentType = () => {
-  const [tradingSymbol, setTradingSymbol] = React.useState<string>("GOLD");
+  const networkProvider = React.useContext(NetworkContext);
+  const availableSynths = networkProvider.getAvailableSynths();
+  const [tradingSynthAddress, setTradingSynthAddress] = React.useState<string>(availableSynths[0]?.address);
 
   return (
     <>
@@ -240,11 +257,18 @@ const TradingView: NextComponentType = () => {
                   <SelectPicker
                     size="lg"
                     label="Synth"
-                    data={Pairs}
+                    data={
+                      availableSynths.map((inst) => {
+                        return {
+                          label: inst.fullName,
+                          value: inst.address
+                        }
+                      })
+                    }
                     style={{ width: 300, minWidth: 250 }}
-                    onChange={setTradingSymbol}
-                    cleanable={false}
-                    defaultValue={tradingSymbol}
+                    onChange={setTradingSynthAddress}
+                    // cleanable={false}
+                    defaultValue={tradingSynthAddress}
                   />
                 </FlexboxGrid.Item>
                 <FlexboxGrid.Item colspan={16}>
@@ -273,7 +297,7 @@ const TradingView: NextComponentType = () => {
                 height={780}
                 width="auto"
                 theme="dark"
-                symbol={tradingSymbol}
+                symbol={availableSynths.find(inst => inst.address === tradingSynthAddress)?.tradingViewSymbol}
                 allow_symbol_change={false}
                 container_id={"tradingview_aaab4"}
                 // toolbar_bg="#282c34"

@@ -1,10 +1,11 @@
 import type { NextComponentType } from "next";
 
 import { Placeholder } from 'rsuite';
+import YoutubeEmbed from "../Youtube";
 
 const HomeView: NextComponentType = () => {
     return (
-        <Placeholder.Paragraph style={{ marginTop: 30 }} rows={5} graph="image" active />
+        <YoutubeEmbed embedId="r2hlTCYfyY8" />
     );
 }
 

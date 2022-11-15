@@ -1,5 +1,5 @@
-import { TXState } from "@/networks/base_old";
-import { Notification, useToaster, useToaster } from "rsuite";
+import TXState from "@/networks/base/txstate";
+import { Notification, useToaster} from "rsuite";
 
 
 const WalletNotification = ({type, header, content}) => (

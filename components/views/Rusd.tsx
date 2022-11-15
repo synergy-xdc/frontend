@@ -24,7 +24,8 @@ import {
     WalletAskConfirmTX,
     WalletTXSuccessfullyBroadcasted,
 } from "@/components/WalletNotification";
-import { Amount, TXState } from "@/networks/base_old";
+import Amount from "@/networks/base/amount";
+import TXState from "@/networks/base/txstate";
 import { BigNumber } from "ethers";
 
 const UserRetableView_: NextComponentType = ({

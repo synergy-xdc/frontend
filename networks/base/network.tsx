@@ -100,6 +100,7 @@ abstract class BaseNetwork {
 
     abstract wethLocked(): Amount | undefined
     abstract rawRepay(): Amount | undefined
+    abstract userDebt(): Amount | undefined
 
 }
 

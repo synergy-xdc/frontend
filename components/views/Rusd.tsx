@@ -459,6 +459,7 @@ const Burn: NextComponentType = () => {
     const rawRepay = networkProvider.rawRepay();
     const rawPrice = networkProvider.getRawPrice();
     const minCRation = networkProvider.getMinCRatio();
+    const debt = networkProvider.userDebt();
 
     const rusdInsuranceAllowance = new Amount(BigNumber.from(0), 18);
     const [rusdValue, setRusdValue] = React.useState<Amount>(
@@ -552,6 +553,7 @@ const Burn: NextComponentType = () => {
                 <Form.HelpText>New balance: {
                     new Amount(rusdBalance?.amount - rusdValue?.amount, 18).toHumanString(2)
                 }</Form.HelpText>
+                <Form.HelpText>Your rUSD debt: {debt?.toHumanString(2)}</Form.HelpText>
             </Form.Group>
             <br/>
             <Form.Group controlId="_">

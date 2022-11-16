@@ -138,14 +138,7 @@ class EthereumNetwork extends BaseNetwork {
             abi: RusdABI,
             functionName: "balanceOf",
             args: [account.address],
-        });
-        wagmi.useContractEvent({
-            address: (rusdAddress.data ? rusdAddress.data : "0x0") as DynAddress,
-            abi: WethABI,
-            eventName: "Transfer",
-            listener: (...event) => {
-                rusdBalanceOfCall.refetch().then((val) => val);
-            },
+            watch: true
         });
         if (
             rusdBalanceOfCall.data !== undefined &&
@@ -252,6 +245,7 @@ class EthereumNetwork extends BaseNetwork {
             abi: RawABI,
             functionName: "balanceOf",
             args: [account.address],
+            watch: true
         });
         if (
             wethBalanceOfCall.data !== undefined &&
@@ -620,6 +614,23 @@ class EthereumNetwork extends BaseNetwork {
         return undefined;
     }
 
+    userDebt(): Amount | undefined {
+        const account = wagmi.useAccount();
+        const debt = wagmi.useContractRead({
+            address: SynergyAddress,
+            abi: SynergyABI,
+            functionName: "userDebt",
+            args: [account.address],
+            watch: true
+        })
+
+        if (debt.data !== undefined && debt.data !== null) {
+            const debtRusd = new Amount(debt.data, 18)
+            return debtRusd;
+        }
+        return undefined;
+    }
+
     getNewRawAllowanceCallback(
         amount: Amount,
         tx_state_changes_callback: (state: TXState) => void
@@ -670,7 +681,8 @@ class EthereumNetwork extends BaseNetwork {
             address: SynergyAddress,
             abi: SynergyABI,
             functionName: "userDebts",
-            args: [account?.address]
+            args: [account?.address],
+            watch: true
         })
 
         if (userDebt.data?.collateral !== undefined) {

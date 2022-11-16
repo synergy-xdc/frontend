@@ -33,7 +33,8 @@ export interface FrontendUserInsurance {
     availableAt: string,
     rawRepaid: string,
     unstakeButton: ReactNode,
-    availableCompensation: Amount
+    availableCompensation: Amount,
+    availableCompensationString: string,
 }
 
 // return [
@@ -58,7 +59,11 @@ abstract class BaseNetwork {
     abstract getWethAllowance(): Amount | undefined
     abstract getCurrentCRatio(): number | undefined
     abstract getMinCRatio(): number | undefined
-    abstract getNewWethAllowanceCallback(amount: Amount, tx_state_changes_callback: (state: TXState) => void): Function
+    abstract getRawInsuranceAllowance(): Amount | undefined
+    abstract getNewWethAllowanceCallback(
+        amount: Amount,
+        tx_state_changes_callback: (state: TXState) => void
+    ): Function
     abstract predictCollateralRatio(amountToMint: Amount, amountToPledge: Amount, increase: boolean): number | undefined
     abstract getMintCallback(
         amountToMint: Amount,
@@ -88,6 +93,13 @@ abstract class BaseNetwork {
     abstract getSynthBalance(
         synthAddress: string
     ): Amount | undefined
+    abstract getNewRawAllowanceCallback(
+        amount: Amount,
+        tx_state_changes_callback: (state: TXState) => void
+    ): Function
+
+    abstract wethLocked(): Amount | undefined
+    abstract rawRepay(): Amount | undefined
 
 }
 

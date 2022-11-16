@@ -7,9 +7,5 @@ enum TXState {
     Done
 }
 
-export interface WritingState {
-    errorMsg: string | null,
-    callback: () => void
-}
 
 export default TXState;

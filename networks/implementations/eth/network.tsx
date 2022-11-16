@@ -21,9 +21,11 @@ import { BigNumber, ethers, utils } from "ethers";
 
 import React from "react";
 import Amount from "@/networks/base/amount";
-import BaseNetwork, { FrontendSynth, FrontendUserInsurance, WalletPrimaryData } from "@/networks/base/network";
-import TXState from "@/networks/base/txstate";
+import BaseNetwork, { ContractUserInsurance, FrontendSynth, FrontendUserInsurance, WalletPrimaryData } from "@/networks/base/network";
+import TXState, { ContractWriteAccess } from "@/networks/base/txstate";
 import { sign } from "crypto";
+import { Button, toaster, useToaster } from "rsuite";
+import { NotificationTXRevertError } from "@/components/WalletNotification";
 
 const CHAIN = wagmi.chain.goerli;
 const chains = [wagmi.chain.goerli];
@@ -43,6 +45,7 @@ type DynAddress = `0x${string}` | undefined;
 
 
 const SynergyAddress: string = "0x2ECa37c63F732d05E9F4Ae31e6A7229598EaEe26";
+const InsuranceAddress: string = "0x31CD4A64EE91b3aEBE7476B7834c9e57F8d12B54";
 
 // const walletConnectConfig = {
 //     projectId: "12647116f49027a9b16f4c0598eb6d74",
@@ -71,11 +74,13 @@ const AvailableSynth: FrontendSynth[] = [
 ];
 
 
-export const EthereumClientContext: React.Context<EthereumClient | undefined> = React.createContext(undefined);
+export const EthereumClientContext = React.createContext<EthereumClient | undefined>(undefined);
 
 
 class EthereumNetwork extends BaseNetwork {
     wethApproveState: TXState = TXState.Done;
+    rawApproveState: TXState = TXState.Done;
+    unlockWethState: TXState = TXState.Done;
     mintState: TXState = TXState.Done;
     burnState: TXState = TXState.Done;
     stakeRawState: TXState = TXState.Done;
@@ -167,6 +172,7 @@ class EthereumNetwork extends BaseNetwork {
             abi: RawABI,
             functionName: "balanceOf",
             args: [account.address],
+            watch: true
         });
         if (
             rawBalance.data !== undefined &&
@@ -179,27 +185,26 @@ class EthereumNetwork extends BaseNetwork {
     }
 
     getRawPrice(): Amount | undefined {
-        const account = wagmi.useAccount();
-        const oracleContractAddressCall = wagmi.useContractRead({
+        const oracleAddress = wagmi.useContractRead({
             address: SynergyAddress,
             abi: SynergyABI,
             functionName: "oracle",
         });
-        const rawContractAddressCall = wagmi.useContractRead({
+        const rawAddress = wagmi.useContractRead({
             address: SynergyAddress,
             abi: SynergyABI,
             functionName: "raw",
         });
         const rawPrice = wagmi.useContractRead({
-            address: oracleContractAddressCall.data as DynAddress,
+            address: oracleAddress.data as DynAddress,
             abi: OracleABI,
             functionName: "getPrice",
-            args: [rawContractAddressCall.data],
+            args: [rawAddress.data],
         });
         if (rawPrice.data !== undefined) {
-            const rawPrice = rawPrice.data[0] as BigNumber;
+            const rawPriceBN = rawPrice.data[0] as BigNumber;
             const rawPriceDecimals = rawPrice.data[1];
-            return new Amount(rawPrice, rawPriceDecimals);
+            return new Amount(rawPriceBN, rawPriceDecimals);
         } else {
             return undefined;
         }
@@ -299,7 +304,7 @@ class EthereumNetwork extends BaseNetwork {
             watch: true
         });
         if (synergyCollateralRatio.data !== undefined) {
-            return synergyCollateralRatio.data / 10 ** 6;
+            return synergyCollateralRatio.data as number / 10 ** 6;
         }
 
         return undefined;
@@ -321,8 +326,8 @@ class EthereumNetwork extends BaseNetwork {
     getNewWethAllowanceCallback(
         amount: Amount,
         tx_state_changes_callback: (state: TXState) => void
-    ): Function {
-        const account = wagmi.useAccount();
+    ): ContractWriteAccess {
+        const toaster = useToaster();
         const wethAddress = wagmi.useContractRead({
             address: SynergyAddress,
             abi: SynergyABI,
@@ -350,7 +355,11 @@ class EthereumNetwork extends BaseNetwork {
             tx_state_changes_callback(wethApproveNewState);
         }
         console.log(signWait.status);
-        return setWethAllowanceSign.write ? setWethAllowanceSign.write : () => {};
+        return this._writeContractOrShowErrorFunction(
+            setWethAllowanceSignConfig.error,
+            setWethAllowanceSign.write,
+            toaster
+        )
     }
 
     predictCollateralRatio(
@@ -391,8 +400,8 @@ class EthereumNetwork extends BaseNetwork {
             functionName: "mint",
             args: [amountToMint.amount, amountToPledge.amount],
         })
+        const toaster = useToaster();
         const mintSign = wagmi.useContractWrite(mintSignConfig.config);
-        console.log("MINT", mintSignConfig.error);
         const signWait = wagmi.useWaitForTransaction({ hash: mintSign.data?.hash });
         const newMintState = this._defineStateChangesCallback(
             signWait.isFetching,
@@ -405,7 +414,11 @@ class EthereumNetwork extends BaseNetwork {
             this.mintState = newMintState;
             tx_state_changes_callback(newMintState);
         }
-        return mintSign.write ? mintSign.write : () => {};
+        return this._writeContractOrShowErrorFunction(
+            mintSignConfig.error,
+            mintSign.write,
+            toaster
+        )
     }
 
     getBurnRusdCallback(
@@ -419,6 +432,7 @@ class EthereumNetwork extends BaseNetwork {
             functionName: "burn",
             args: [amount.amount, insuranceId],
         });
+        const toaster = useToaster();
         const burnSign = wagmi.useContractWrite(burnSignConfig.config);
         const signWait = wagmi.useWaitForTransaction({ hash: burnSign.data?.hash });
         const newBurnState = this._defineStateChangesCallback(
@@ -438,69 +452,264 @@ class EthereumNetwork extends BaseNetwork {
             this.burnState = newBurnState;
             tx_state_changes_callback(newBurnState);
         }
-        return burnSign.write ? burnSign.write : () => {};
+        return this._writeContractOrShowErrorFunction(
+            burnSignConfig.error,
+            burnSign.write,
+            toaster
+        );
     }
 
     getUserInssurances(): FrontendUserInsurance[] {
-        return [];
+        // const insuranceAddress = wagmi.useContractRead({
+        //     address: SynergyAddress,
+        //     abi: SynergyABI,
+        //     functionName: "insurance",
+        // })
+        const account = wagmi.useAccount();
+        const userInsurancesHashes = wagmi.useContractInfiniteReads({
+            cacheKey: "userInsurances",
+            ...wagmi.paginatedIndexesConfig(
+                (index) => {
+                    return [
+                        {
+                            address: InsuranceAddress,
+                            abi: InsuranceABI,
+                            functionName: "userInsurances",
+                            args: [account.address, BigNumber.from(index)] as const,
+                        }
+                    ]
+                },
+                { start: 0, perPage: 20, direction: 'increment' },
+            ),
+        })
+        const insurancesDetail = wagmi.useContractReads({
+            contracts: userInsurancesHashes.data?.pages[0].filter(hash => hash).map((hash) => {
+                return {
+                    address: InsuranceAddress,
+                    abi: InsuranceABI,
+                    functionName: "insurances",
+                    args: [hash]
+                }
+            }),
+        })
+        const insurancesCompensation = wagmi.useContractReads({
+            contracts: userInsurancesHashes.data?.pages[0].filter(hash => hash).map((hash) => {
+                return {
+                    address: InsuranceAddress,
+                    abi: InsuranceABI,
+                    functionName: "availableCompensation",
+                    args: [hash]
+                }
+            }),
+        })
+        const userInsurances: FrontendUserInsurance[] | undefined = insurancesDetail.data?.map((insurance: ContractUserInsurance) => {
+            const compensation = new Amount(
+                insurancesCompensation.data?.[insurancesDetail.data?.indexOf(insurance) as number],
+                18
+            );
+            return {
+                id: userInsurancesHashes.data?.pages[0][insurancesDetail.data?.indexOf(insurance) as number],
+                rawLocked: new Amount(insurance.stakedRaw, 18).toHumanString(4),
+                lockedAt: new Date(insurance.startTime.toNumber() * 1000).toString(),
+                availableAt: new Date(insurance.startTime.add(insurance.lockTime) * 1000).toString(),
+                rawRepaid: new Amount(insurance.repaidRaw, 18).toHumanString(18),
+                availableCompensation: compensation,
+                availableCompensationString:  compensation.toHumanString(3),
+                unstakeButton: (
+                    <Button
+                        style={{ borderWidth: 2 }}
+                        color="red"
+                        appearance="ghost"
+                        block
+                        disabled={Date.now() / 1000 < insurance.startTime.toNumber() + insurance.lockTime.toNumber()}
+                        // onClick={async (event) => await this.unstakeCallback(insuranceId, getStateHandlingCallback(toaster))}
+                    >
+                        Unstake
+                    </Button>
+                )
+            }
+        })
+        return userInsurances ? userInsurances : [];
     }
+
+
+    rawRepay(): Amount| undefined {
+        const account = wagmi.useAccount();
+        const userShares = wagmi.useContractRead({
+            address: SynergyAddress,
+            abi: SynergyABI,
+            functionName: "userDebt",
+            args: [account.address]
+        })
+        const userDebt = wagmi.useContractRead({
+            address: SynergyAddress,
+            abi: SynergyABI,
+            functionName: "userDebts",
+            args: [account.address]
+        })
+
+        if (
+            userShares.data !== undefined && userDebt.data !== undefined
+            && userShares.data !== null && userDebt.data !== null
+        ) {
+            const repay: BigNumber =
+                userDebt.data.minted > userShares.data ?
+                BigNumber.from(0)
+                : userShares.data.sub(userDebt.data.minted)
+            return new Amount(repay, 18)
+        }
+        return undefined;
+    }
+
     stakeRawCallback(
         amountToStake: Amount,
         expireAt: Date, tx_state_changes_callback: (state: TXState) => void
     ): Function {
-        const insuranceAddress = wagmi.useContractRead({
-            address: SynergyAddress,
-            abi: SynergyABI,
-            functionName: "insurance",
-        });
-
+        const toaster = useToaster();
         const timeDelta = expireAt.getTime() - Date.now();
         const stakeRawSignConfig = wagmi.usePrepareContractWrite({
-            address: insuranceAddress,
+            address: InsuranceAddress,
             abi: InsuranceABI,
             functionName: "stakeRaw",
             args: [Math.round(timeDelta / 1000), amountToStake.amount],
         });
         const stakeRawSign = wagmi.useContractWrite(stakeRawSignConfig.config);
-        // wagmi.useContractEvent({
-        //     address: insuranceAddress,
-        //     abi: InsuranceABI,
-        //     eventName: "CreatedInsurance",
-        //     listener: (...event) => {
-        //         console.log(event);
-        //         if (
-        //             event[4].transactionHash == stakeRawSign.data?.hash &&
-        //             this.stakeRawState == TXState.Broadcasting
-        //         ) {
-        //             this.stakeRawState = TXState.Done;
-        //             tx_state_changes_callback(TXState.Success);
-        //         }
-        //     },
-        // });
         const signWait = wagmi.useWaitForTransaction({ hash: stakeRawSign.data?.hash });
         const newStakeRawState = this._defineStateChangesCallback(
             signWait.isFetching,
             stakeRawSign.isLoading,
+            stakeRawSignConfig.status,
             this.stakeRawState
         );
 
         if (this.stakeRawState !== newStakeRawState) {
-            console.log(
-                signWait.isFetching,
-                stakeRawSign.isLoading,
-                this.stakeRawState,
-                newStakeRawState
-            );
             this.stakeRawState = newStakeRawState;
             tx_state_changes_callback(newStakeRawState);
         }
-        return stakeRawSign.write ? stakeRawSign.write : () => {};
+        return this._writeContractOrShowErrorFunction(
+            stakeRawSignConfig.error,
+            stakeRawSign.write,
+            toaster
+        )
     }
-    unstakeCallback(insuranceId: string, tx_state_changes_callback: (state: TXState) => void): void {
-        console.log(1);
+
+    getRawInsuranceAllowance(): Amount | undefined {
+        const account = wagmi.useAccount();
+        const rawAddress = wagmi.useContractRead({
+            address: SynergyAddress,
+            abi: SynergyABI,
+            functionName: "raw",
+        });
+        const rawContract = wagmi.useToken({
+            address: rawAddress.data as DynAddress,
+        });
+        const rawAllowance = wagmi.useContractRead({
+            address: rawAddress.data as string,
+            abi: RawABI,
+            functionName: "allowance",
+            args: [account.address, InsuranceAddress],
+            watch: true
+        });
+        if (
+            rawAllowance.data !== undefined &&
+            rawContract.data?.decimals !== undefined
+        ) {
+            const balance: BigNumber = rawAllowance.data as BigNumber;
+            return new Amount(balance, rawContract.data.decimals);
+        }
+        return undefined;
     }
+
+    getNewRawAllowanceCallback(
+        amount: Amount,
+        tx_state_changes_callback: (state: TXState) => void
+    ): Function {
+        const toaster = useToaster();
+        const rawAddress = wagmi.useContractRead({
+            address: SynergyAddress,
+            abi: SynergyABI,
+            functionName: "raw",
+            watch: true
+        });
+        const setRawAllowanceSignConfig = wagmi.usePrepareContractWrite({
+            address: rawAddress.data as DynAddress,
+            abi: RawABI,
+            functionName: "approve",
+            args: [InsuranceAddress, amount.amount],
+        });
+        const setRawAllowanceSign = wagmi.useContractWrite(setRawAllowanceSignConfig.config);
+        const signWait = wagmi.useWaitForTransaction({
+            hash: setRawAllowanceSign.data?.hash,
+        });
+        const rawApproveNewState = this._defineStateChangesCallback(
+            signWait.isFetching,
+            setRawAllowanceSign.isLoading,
+            signWait.status,
+            this.rawApproveState,
+        );
+        if (this.rawApproveState !== rawApproveNewState) {
+            this.rawApproveState = rawApproveNewState;
+            tx_state_changes_callback(rawApproveNewState);
+        }
+        return this._writeContractOrShowErrorFunction(
+            setRawAllowanceSignConfig.error,
+            setRawAllowanceSign.write,
+            toaster
+        )
+    }
+    unstakeCallback(
+        insuranceId: string,
+        tx_state_changes_callback: (state: TXState) => void
+    ): void {
+        console.log("TODO");
+    }
+
+    wethLocked(): Amount | undefined {
+        const account = wagmi.useAccount();
+        const userDebt = wagmi.useContractRead({
+            address: SynergyAddress,
+            abi: SynergyABI,
+            functionName: "userDebts",
+            args: [account?.address]
+        })
+
+        if (userDebt.data?.collateral !== undefined) {
+            const wethAmount = new Amount(
+                userDebt.data?.collateral,
+                18
+            )
+            return wethAmount;
+        }
+        return undefined
+    }
+
     unlockWethCallback(amount: Amount, tx_state_changes_callback: (state: TXState) => void): Function {
-        console.log(1);
+        const toaster = useToaster();
+        const unlockWethConfig = wagmi.usePrepareContractWrite({
+            address: SynergyAddress,
+            abi: SynergyABI,
+            functionName: "withdraw",
+            args: [amount.amount],
+        });
+        const unclockWethSign = wagmi.useContractWrite(unlockWethConfig.config);
+        const signWait = wagmi.useWaitForTransaction({
+            hash: unclockWethSign.data?.hash,
+        });
+        const unlockWethNewState = this._defineStateChangesCallback(
+            signWait.isFetching,
+            unclockWethSign.isLoading,
+            signWait.status,
+            this.rawApproveState,
+        );
+        if (this.unlockWethState !== unlockWethNewState) {
+            this.unlockWethState = unlockWethNewState;
+            tx_state_changes_callback(unlockWethNewState);
+        }
+        return this._writeContractOrShowErrorFunction(
+            unlockWethConfig.error,
+            unclockWethSign.write,
+            toaster
+        )
     }
     getSynthBalance(synthAddress: string): Amount | undefined {
         console.log(1);
@@ -529,6 +738,27 @@ class EthereumNetwork extends BaseNetwork {
             default:
                 return currentState;
         }
+    }
+
+    _writeContractOrShowErrorFunction(
+        error: any | null,
+        writeCallback: Function | undefined,
+        toaster: ReturnType<typeof useToaster>
+    ): Function {
+        return () => {
+            if (error) {
+                toaster.push(
+                    <NotificationTXRevertError message={error.reason} />,
+                    { placement: "topStart"}
+                )
+                setTimeout(() => {
+                    toaster.clear()
+                }, 10*1000)
+            } else {
+                writeCallback?.()
+            }
+        }
+
     }
 }
 

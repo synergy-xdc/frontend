@@ -2,7 +2,11 @@ import TXState from "@/networks/base/txstate";
 import { Notification, useToaster} from "rsuite";
 
 
-const WalletNotification = ({type, header, content}) => (
+const WalletNotification = ({type, header, content}: {
+    type: string,
+    header: string,
+    content: string
+}) => (
     <Notification type={type} header={header} closable>
         {content}
     </Notification>
@@ -28,6 +32,19 @@ export const NotificationTXSuccessfullyBroadcasted
         header="TX broadcasted!"
         content="Done!"
     />;
+
+
+export const NotificationTXRevertError = ({message, ...props}: {
+    message: string
+}) => {
+    return (
+        <WalletNotification
+            type="error"
+            header="Contract will revert!"
+            content={message.charAt(0).toUpperCase() + message.slice(1)}
+        />
+    );
+}
 
 
 

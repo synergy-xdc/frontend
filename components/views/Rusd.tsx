@@ -99,7 +99,9 @@ const Staking: NextComponentType = () => {
     // const [rawValue, setRawValue] = React.useState<number>(100);
     const networkProvider = useContext(NetworkContext);
     const rawBalance = networkProvider.getRawBalance();
-    const [rawValue, setRawValue] = React.useState<Amount>(
+    const rawInsuranceAllowance = networkProvider.getRawInsuranceAllowance();
+
+    const [rawToStakeValue, setRawToStakeValue] = React.useState<Amount>(
         rawBalance ? rawBalance : new Amount(BigNumber.from(0), 18)
     );
 
@@ -111,8 +113,12 @@ const Staking: NextComponentType = () => {
 
     const toaster = useToaster();
     const stakeCallback = networkProvider.stakeRawCallback(
-        rawValue,
+        rawToStakeValue,
         unlockDate,
+        getStateHandlingCallback(toaster)
+    );
+    const rawAllowanceCallback = networkProvider.getNewRawAllowanceCallback(
+        rawToStakeValue,
         getStateHandlingCallback(toaster)
     );
 
@@ -130,12 +136,12 @@ const Staking: NextComponentType = () => {
                 <InputGroup style={{ marginTop: 5, marginBottom: 5 }}>
                     <InputGroup.Button
                         onClick={() =>
-                            setRawValue(
+                            setRawToStakeValue(
                                 new Amount(
-                                    rawValue.amount.sub(
-                                        BigNumber.from(10).pow(rawValue.decimals + 1)
+                                    rawToStakeValue.amount.sub(
+                                        BigNumber.from(10).pow(rawToStakeValue.decimals + 1)
                                     ),
-                                    rawValue.decimals
+                                    rawToStakeValue.decimals
                                 )
                             )
                         }
@@ -145,24 +151,24 @@ const Staking: NextComponentType = () => {
                     <InputNumber
                         className="no-arrows-input-number"
                         // step={10.1}
-                        value={rawValue.toHumanString(2)}
+                        value={rawToStakeValue.toHumanString(2)}
                         onChange={(val) =>
-                            setRawValue(
+                            setRawToStakeValue(
                                 Amount.fromString(
                                     typeof val == "string" ? val : val.toString(),
-                                    rawValue.decimals
+                                    rawToStakeValue.decimals
                                 )
                             )
                         }
                     />
                     <InputGroup.Button
                         onClick={() =>
-                            setRawValue(
+                            setRawToStakeValue(
                                 new Amount(
-                                    rawValue.amount.add(
-                                        BigNumber.from(10).pow(rawValue.decimals + 1)
+                                    rawToStakeValue.amount.add(
+                                        BigNumber.from(10).pow(rawToStakeValue.decimals + 1)
                                     ),
-                                    rawValue.decimals
+                                    rawToStakeValue.decimals
                                 )
                             )
                         }
@@ -171,6 +177,7 @@ const Staking: NextComponentType = () => {
                     </InputGroup.Button>
                 </InputGroup>
                 <Form.HelpText>Balance: {rawBalance?.toHumanString(4)}</Form.HelpText>
+                <Form.HelpText>Allowance: {rawInsuranceAllowance?.toHumanString(4)}</Form.HelpText>
             </Form.Group>
             <br />
             <Form.Group controlId="_">
@@ -186,15 +193,32 @@ const Staking: NextComponentType = () => {
                 {/* <Form.HelpText>RAW insurance: TODO</Form.HelpText> */}
             </Form.Group>
             <br />
-            <Button
-                style={{ backgroundColor: "#089a81", borderWidth: 2 }}
-                appearance="primary"
-                color="green"
-                block
-                onClick={async () => stakeCallback()}
-            >
-                <b>Stake</b>
-            </Button>
+            <ButtonGroup justified>
+                <Button
+                    style={{ backgroundColor: "#089a81", borderWidth: 2 }}
+                    appearance="primary"
+                    color="green"
+                    disabled={
+                        parseFloat(rawInsuranceAllowance?.toHumanString(18)) >=
+                        parseFloat(rawToStakeValue?.toHumanString(18))
+                    }
+                    onClick={async () => rawAllowanceCallback()}
+                >
+                    <b>Approve</b>
+                </Button>
+                <Button
+                    style={{ backgroundColor: "#089a81", borderWidth: 2 }}
+                    disabled={
+                        parseFloat(rawInsuranceAllowance?.toHumanString(18)) <
+                        parseFloat(rawToStakeValue?.toHumanString(18))
+                    }
+                    appearance="primary"
+                    color="green"
+                    onClick={async () => stakeCallback()}
+                >
+                    <b>Stake</b>
+                </Button>
+            </ButtonGroup>
             <hr />
             <Table
                 rowHeight={60}
@@ -242,6 +266,11 @@ const Staking: NextComponentType = () => {
                 </Table.Column>
 
                 <Table.Column verticalAlign="middle" width={150} flexGrow={1}>
+                    <Table.HeaderCell>Available RAW Compensation</Table.HeaderCell>
+                    <Table.Cell dataKey="availableCompensationString" />
+                </Table.Column>
+
+                <Table.Column verticalAlign="middle" width={150} flexGrow={1}>
                     <Table.HeaderCell>#</Table.HeaderCell>
                     <Table.Cell dataKey="unstakeButton" />
                 </Table.Column>
@@ -285,7 +314,7 @@ const Mint: NextComponentType = () => {
             header="Mint rUSD"
         >
             <p>
-            Deposit WTRX as a collateral and get rUSD in return. Resulting collateral ratio should be greater than min collateral ratio
+            Deposit WETH as a collateral and get rUSD in return. Resulting collateral ratio should be greater than min collateral ratio
             </p>
             <hr />
             <Form.Group controlId="_">
@@ -330,7 +359,7 @@ const Mint: NextComponentType = () => {
             </Form.Group>
             <br />
             <Form.Group controlId="_">
-                <Form.ControlLabel>WTRX amount</Form.ControlLabel>
+                <Form.ControlLabel>WETH amount</Form.ControlLabel>
                 <InputGroup style={{ marginTop: 5, marginBottom: 5 }}>
                     <InputGroup.Button
                         onClick={() =>
@@ -426,7 +455,10 @@ const Burn: NextComponentType = () => {
     const networkProvider = React.useContext(NetworkContext);
     const rusdBalance = networkProvider.getRusdBalance();
     const wrappedGasTokenBalance = networkProvider.getWethBalance();
-
+    const wethLocked = networkProvider.wethLocked();
+    const rawRepay = networkProvider.rawRepay();
+    const rawPrice = networkProvider.getRawPrice();
+    const minCRation = networkProvider.getMinCRatio();
 
     const rusdInsuranceAllowance = new Amount(BigNumber.from(0), 18);
     const [rusdValue, setRusdValue] = React.useState<Amount>(
@@ -440,6 +472,19 @@ const Burn: NextComponentType = () => {
 
     const [insuranceId, setInsuranceId] = React.useState<string | null>(null);
     const userInsurances = networkProvider.getUserInssurances();
+
+    const withdrawNewCRatio = networkProvider.predictCollateralRatio(
+        new Amount(BigNumber.from(0), 18),
+        wrappedGasTokenValue,
+        false
+    )
+
+    const BurnNewCRatio = networkProvider.predictCollateralRatio(
+        rusdValue,
+        new Amount(BigNumber.from(0), 18),
+        false
+    )
+
 
     const burnCallback = networkProvider.getBurnRusdCallback(
         rusdValue,
@@ -455,7 +500,7 @@ const Burn: NextComponentType = () => {
     return (
         <Panel bordered shaded header="Burn rUSD">
             <p>
-            Burn rUSD to increase your collateral ratio and get ability to withdraw collateral in wTRX. You can choose insurance to repay your debt pool losses in RAW.
+            Burn rUSD to increase your collateral ratio and get ability to withdraw collateral in WETH. You can choose insurance to repay your debt pool losses in RAW.
             </p>
             <hr />
             <Form.Group controlId="_">
@@ -517,7 +562,7 @@ const Burn: NextComponentType = () => {
                         data={
                             userInsurances.map(
                                 (elem) => ({
-                                    label: `${elem.id.slice(0, 6)}... (+${elem.availableCompensation?.toHumanString(4)} RAW)`,
+                                    label: `${elem.id.slice(0, 6)}... (Max: ${elem.availableCompensation?.toHumanString(4)} RAW)`,
                                     value: elem.id
                                 })
                             )
@@ -527,6 +572,13 @@ const Burn: NextComponentType = () => {
                         defaultValue={"0x0000000000000000000000000000000000000000000000000000000000000000"}
                     />
                 </div>
+                <Form.HelpText>Current RAW repay: {rawRepay?.toHumanString(4)} ({rawPrice ? rawRepay?.mulAmount(rawPrice).toHumanString(2) : 0}$, price: {rawPrice?.toHumanString(5)}$)</Form.HelpText>
+                <Form.HelpText>
+                    New C-ratio: {BurnNewCRatio}%
+                </Form.HelpText>
+                <Form.HelpText>
+                    Min C-ratio: {minCRation}%
+                </Form.HelpText>
             </Form.Group>
             <br />
             <Button
@@ -540,7 +592,7 @@ const Burn: NextComponentType = () => {
             </Button>
             <hr />
             <p>
-            Withdraw wTRX collateral (this decreases collateral ratio).
+            Withdraw WETH collateral (this decreases collateral ratio).
             </p>
             <br />
             <Form.Group controlId="_">
@@ -551,7 +603,7 @@ const Burn: NextComponentType = () => {
                             setWrappedGasTokenValue(
                                 new Amount(
                                     wrappedGasTokenValue.amount.sub(
-                                        BigNumber.from(10).pow(wrappedGasTokenValue.decimals + 1)
+                                        BigNumber.from(10).pow(wrappedGasTokenValue.decimals - 1)
                                     ),
                                     wrappedGasTokenValue.decimals
                                 )
@@ -579,7 +631,7 @@ const Burn: NextComponentType = () => {
                             setWrappedGasTokenValue(
                                 new Amount(
                                     wrappedGasTokenValue.amount.add(
-                                        BigNumber.from(10).pow(wrappedGasTokenValue.decimals + 1)
+                                        BigNumber.from(10).pow(wrappedGasTokenValue.decimals - 1)
                                     ),
                                     wrappedGasTokenValue.decimals
                                 )
@@ -589,15 +641,18 @@ const Burn: NextComponentType = () => {
                         +
                     </InputGroup.Button>
                 </InputGroup>
-                {/* <Form.HelpText>
-                    Locked Amount: TODO
-                </Form.HelpText> */}
+                <Form.HelpText>
+                    Locked WETH Amount: {wethLocked?.toHumanString(5)}
+                </Form.HelpText>
                 <Form.HelpText>
                     Current balance: {wrappedGasTokenBalance?.toHumanString(5)}
                 </Form.HelpText>
-                {/* <Form.HelpText>
-                    New balance: TODO
-                </Form.HelpText> */}
+                <Form.HelpText>
+                    New C-ratio: {withdrawNewCRatio}%
+                </Form.HelpText>
+                <Form.HelpText>
+                    Min C-ratio: {minCRation}%
+                </Form.HelpText>
             </Form.Group>
             <br />
             <Button
@@ -612,7 +667,7 @@ const Burn: NextComponentType = () => {
                 }}
                 onClick={async () => withdrawCallback()}
             >
-                <b>Withdraw WTRX</b>
+                <b>Withdraw WETH</b>
             </Button>
         </Panel>
     );

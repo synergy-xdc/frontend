@@ -1,4 +1,5 @@
-import { BigNumber } from "ethers";
+import { BigNumber, utils } from "ethers";
+
 
 export default class Amount {
     amount: BigNumber
@@ -10,24 +11,13 @@ export default class Amount {
     }
 
     toHumanString(roundTo: number): string {
-        const wholeStringified = this.amount.toString();
-        let floatStringified =
-            wholeStringified.slice(0, wholeStringified.length - this.decimals)
-            + "."
-            + wholeStringified
-                .slice(wholeStringified.length - this.decimals, wholeStringified.length)
-                .slice(0, roundTo)
-        ;
-        if (floatStringified.startsWith(".")) {
-            floatStringified = "0" + floatStringified;
+        let numberStringified = utils.formatUnits(this.amount.toString(), this.decimals);
+        const dotIndex = numberStringified.indexOf(".");
+        numberStringified = numberStringified.slice(0, dotIndex) + "." + numberStringified.slice(dotIndex + 1, dotIndex + 1 + roundTo)
+        if (numberStringified.endsWith(".0")) {
+            numberStringified = numberStringified.slice(0, numberStringified.length - 2)
         }
-        while (floatStringified.endsWith("0")) {
-            floatStringified = floatStringified.slice(0, floatStringified.length - 1)
-        }
-        if (floatStringified.endsWith(".")) {
-            floatStringified = floatStringified.slice(0, floatStringified.length - 1)
-        }
-        return floatStringified;
+        return numberStringified
     }
 
     mulAmount(other: Amount): Amount {
@@ -38,20 +28,6 @@ export default class Amount {
     }
 
     static fromString(val: string, decimals: number): Amount {
-        val = val ? val : "0";
-        if (val.includes(".") || val.includes(",")) {
-            const [integerStr, decimalStr] = val.includes(".") ? val.split(".") : val.split(",");
-            const [integer, decimal] = [parseInt(integerStr), parseInt(decimalStr)];
-            return new Amount(
-                BigNumber.from(integer).mul(BigNumber.from(10).pow(decimals))
-                .add(BigNumber.from(decimal).mul(BigNumber.from(10).pow(decimals - decimalStr.length))),
-                decimals
-            )
-        } else {
-            return new Amount(
-                BigNumber.from(parseInt(val)).mul(BigNumber.from(10).pow(decimals)),
-                decimals
-            )
-        }
+        return new Amount(utils.parseUnits(isNaN(parseInt(val)) ? "0" : val, decimals), decimals)
     }
 }

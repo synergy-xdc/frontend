@@ -335,14 +335,19 @@ const Mint: NextComponentType = () => {
                     <InputNumber
                         className="no-arrows-input-number"
                         step={0.1}
-                        value={rusdValue?.toHumanString(2)}
-                        onChange={(val) =>
-                            setRusdValue(
-                                Amount.fromString(
-                                    typeof val == "string" ? val : val.toString(),
-                                    18
+                        value={rusdValue?.toHumanString(18)}
+                        onChange={(val) => {
+                                console.log("DOT", val, Amount.fromString(
+                                        typeof val == "string" ? val : val.toString(),
+                                        18
+                                    ).toHumanString(18));
+                                setRusdValue(
+                                    Amount.fromString(
+                                        typeof val == "string" ? val : val.toString(),
+                                        18
+                                    )
                                 )
-                            )
+                            }
                         }
                     />
                     <InputGroup.Button
@@ -378,7 +383,7 @@ const Mint: NextComponentType = () => {
                     <InputNumber
                         className="no-arrows-input-number"
                         step={0.1}
-                        value={wethValue.toHumanString(2)}
+                        value={wethValue.toHumanString(18)}
                         onChange={(val) =>
                             setWethValue(
                                 Amount.fromString(
@@ -497,7 +502,6 @@ const Burn: NextComponentType = () => {
         getStateHandlingCallback(toaster)
     );
 
-
     return (
         <Panel bordered shaded header="Burn rUSD">
             <p>
@@ -524,7 +528,7 @@ const Burn: NextComponentType = () => {
                     <InputNumber
                         className="no-arrows-input-number"
                         step={0.1}
-                        value={rusdValue.toHumanString(2)}
+                        value={rusdValue.toHumanString(18)}
                         onChange={(val) =>
                             setRusdValue(
                                 Amount.fromString(
@@ -551,7 +555,7 @@ const Burn: NextComponentType = () => {
                 </InputGroup>
                 <Form.HelpText>Current balance: {rusdBalance?.toHumanString(2)}</Form.HelpText>
                 <Form.HelpText>New balance: {
-                    new Amount(rusdBalance?.amount - rusdValue?.amount, 18).toHumanString(2)
+                    new Amount(rusdBalance?.amount.sub(rusdValue?.amount) ?? BigNumber.from(0), 18).toHumanString(2)
                 }</Form.HelpText>
                 <Form.HelpText>Your rUSD debt: {debt?.toHumanString(2)}</Form.HelpText>
             </Form.Group>
@@ -617,7 +621,7 @@ const Burn: NextComponentType = () => {
                     <InputNumber
                         className="no-arrows-input-number"
                         step={0.01}
-                        value={wrappedGasTokenValue.toHumanString(2)}
+                        value={wrappedGasTokenValue.toHumanString(18)}
                         onChange={(val) =>
                             setWrappedGasTokenValue(
                                 Amount.fromString(

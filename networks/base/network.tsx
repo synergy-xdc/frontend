@@ -101,6 +101,14 @@ abstract class BaseNetwork {
     abstract wethLocked(): Amount | undefined
     abstract rawRepay(): Amount | undefined
     abstract userDebt(): Amount | undefined
+    abstract synthPrice(synthAddress: string): Amount | undefined
+    abstract swapSynthCallback(
+        methodName: "swapFrom" | "swapTo",
+        synthFromAddress: string,
+        synthToAddress: string,
+        amount: Amount,
+        tx_state_changes_callback: (state: TXState) => void,
+    ): Function
 
 }
 

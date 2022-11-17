@@ -45,7 +45,13 @@ type DynAddress = `0x${string}` | undefined;
 
 
 const SynergyAddress: string = "0x2ECa37c63F732d05E9F4Ae31e6A7229598EaEe26";
-const InsuranceAddress: string = "0x31CD4A64EE91b3aEBE7476B7834c9e57F8d12B54";
+const InsuranceAddress: string = "0x402F27C92e88109Ec4E3A5380FD45a825DD9cde8";
+
+
+const tradingViewSymbols = {
+    rGLD: "GOLD",
+    rGAS: "NATURALGAS"
+}
 
 // const walletConnectConfig = {
 //     projectId: "12647116f49027a9b16f4c0598eb6d74",
@@ -84,6 +90,7 @@ class EthereumNetwork extends BaseNetwork {
     mintState: TXState = TXState.Done;
     burnState: TXState = TXState.Done;
     stakeRawState: TXState = TXState.Done;
+    swapState: TXState = TXState.Done
 
     showedTxs: string[] = [];
 
@@ -285,7 +292,56 @@ class EthereumNetwork extends BaseNetwork {
     }
 
     getAvailableSynths(): FrontendSynth[] {
-        return AvailableSynth;
+
+        const synterAddress = wagmi.useContractRead({
+            address: SynergyAddress,
+            abi: SynergyABI,
+            functionName: "synter"
+        })
+        const totalSynths = wagmi.useContractRead({
+            address: synterAddress.data,
+            abi: SynterABI,
+            functionName: "totalSynts",
+        })
+        const availableSynthsAddresses = wagmi.useContractInfiniteReads({
+            cacheKey: "synths",
+            ...wagmi.paginatedIndexesConfig(
+                (index) => {
+                    return [
+                        {
+                            address: synterAddress.data,
+                            abi: SynterABI,
+                            functionName: "syntList",
+                            args: [BigNumber.from(index)] as const,
+                        }
+                    ]
+                },
+                { start: 0, perPage: 20, direction: 'increment' },
+            ),
+        })
+        console.log("SYNTHSLIST", availableSynthsAddresses.data?.pages[0]);
+
+        const synthsSymbols = wagmi.useContractReads({
+            contracts: availableSynthsAddresses.data?.pages[0].filter(address => address).map((address) => {
+                return {
+                    address: address,
+                    abi: SyntABI,
+                    functionName: "symbol",
+                }
+            }),
+        })
+        const synths: FrontendSynth[] = synthsSymbols.data?.map((symbol) => {
+            const index = synthsSymbols.data?.indexOf(symbol) ?? 0;
+            return {
+                address: availableSynthsAddresses.data?.pages[0][index],
+                fullName: symbol,
+                symbol: symbol,
+                tradingViewSymbol: tradingViewSymbols[symbol],
+            }
+        }) ?? [];
+        console.log("SYMBOLS", synthsSymbols.data);
+        console.log("SYNTHS", synths)
+        return synths ?? [];
     }
 
     getCurrentCRatio(): number | undefined {
@@ -454,12 +510,13 @@ class EthereumNetwork extends BaseNetwork {
     }
 
     getUserInssurances(): FrontendUserInsurance[] {
-        // const insuranceAddress = wagmi.useContractRead({
-        //     address: SynergyAddress,
-        //     abi: SynergyABI,
-        //     functionName: "insurance",
-        // })
         const account = wagmi.useAccount();
+        const insuranceCount = wagmi.useContractRead({
+            address: InsuranceAddress,
+            abi: InsuranceABI,
+            functionName: "totalInsurances",
+            args: [account.address]
+        })
         const userInsurancesHashes = wagmi.useContractInfiniteReads({
             cacheKey: "userInsurances",
             ...wagmi.paginatedIndexesConfig(
@@ -515,7 +572,7 @@ class EthereumNetwork extends BaseNetwork {
                         color="red"
                         appearance="ghost"
                         block
-                        disabled={Date.now() / 1000 < insurance.startTime.toNumber() + insurance.lockTime.toNumber()}
+                        disabled={Date.now() / 1000 < insurance.startTime.toNumber() + insurance.lockTime}
                         // onClick={async (event) => await this.unstakeCallback(insuranceId, getStateHandlingCallback(toaster))}
                     >
                         Unstake
@@ -640,7 +697,6 @@ class EthereumNetwork extends BaseNetwork {
             address: SynergyAddress,
             abi: SynergyABI,
             functionName: "raw",
-            watch: true
         });
         const setRawAllowanceSignConfig = wagmi.usePrepareContractWrite({
             address: rawAddress.data as DynAddress,
@@ -652,6 +708,12 @@ class EthereumNetwork extends BaseNetwork {
         const signWait = wagmi.useWaitForTransaction({
             hash: setRawAllowanceSign.data?.hash,
         });
+        console.log(
+                        signWait.isFetching,
+            setRawAllowanceSign.isLoading,
+            signWait.status,
+            this.rawApproveState,
+        )
         const rawApproveNewState = this._defineStateChangesCallback(
             signWait.isFetching,
             setRawAllowanceSign.isLoading,
@@ -673,6 +735,67 @@ class EthereumNetwork extends BaseNetwork {
         tx_state_changes_callback: (state: TXState) => void
     ): void {
         console.log("TODO");
+    }
+
+    synthPrice(synthAddress: string): Amount | undefined {
+        const oralce = wagmi.useContractRead({
+            address: SynergyAddress,
+            abi: SynergyABI,
+            functionName: "oracle"
+        })
+        const price = wagmi.useContractRead({
+            address: oralce.data,
+            abi: OracleABI,
+            functionName: "getPrice",
+            args: [synthAddress]
+        })
+
+        if (price.data !== undefined && price.data !== null) {
+            const priceAmount = new Amount(price.data[0], price.data[1]);
+            return priceAmount
+        }
+        return undefined
+
+    }
+
+    swapSynthCallback(
+        methodName: "swapFrom" | "swapTo",
+        synthFromAddress: string,
+        synthToAddress: string,
+        amount: Amount,
+        tx_state_changes_callback: (state: TXState) => void,
+    ): Function {
+        const toaster = useToaster();
+        const synterAddress = wagmi.useContractRead({
+            address: SynergyAddress,
+            abi: SynergyABI,
+            functionName: "synter",
+        });
+        const swapConfig = wagmi.usePrepareContractWrite({
+            address: synterAddress.data as DynAddress,
+            abi: SynterABI,
+            functionName: methodName,
+            args: [synthFromAddress, synthToAddress, amount.amount],
+        });
+        const swapSign = wagmi.useContractWrite(swapConfig.config);
+        const signWait = wagmi.useWaitForTransaction({
+            hash: swapSign.data?.hash,
+        });
+        const swapNewState = this._defineStateChangesCallback(
+            signWait.isFetching,
+            swapConfig.isLoading,
+            signWait.status,
+            this.swapState,
+        );
+        if (this.swapState !== swapNewState) {
+            this.swapState = swapNewState;
+            tx_state_changes_callback(swapNewState);
+        }
+        return this._writeContractOrShowErrorFunction(
+            swapConfig.error,
+            swapSign.write,
+            toaster
+        )
     }
 
     wethLocked(): Amount | undefined {
@@ -724,7 +847,20 @@ class EthereumNetwork extends BaseNetwork {
         )
     }
     getSynthBalance(synthAddress: string): Amount | undefined {
-        console.log(1);
+        const account = wagmi.useAccount();
+        const balance = wagmi.useContractRead({
+            address: synthAddress,
+            abi: RusdABI,
+            functionName: "balanceOf",
+            args: [account.address],
+            watch: true
+        })
+
+        if (balance.data !== undefined && balance.data !== null) {
+            const amount = new Amount(balance.data, 18);
+            return amount
+        }
+        return undefined
     }
 
     _defineStateChangesCallback(

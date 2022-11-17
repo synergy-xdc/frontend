@@ -292,56 +292,80 @@ class EthereumNetwork extends BaseNetwork {
     }
 
     getAvailableSynths(): FrontendSynth[] {
+        // const synterAddress = wagmi.useContractRead({
+        //     address: SynergyAddress,
+        //     abi: SynergyABI,
+        //     functionName: "synter"
+        // })
+        // const totalSynths = wagmi.useContractRead({
+        //     address: synterAddress.data,
+        //     abi: SynterABI,
+        //     functionName: "totalSynts",
+        // })
+        // const availableSynthsAddresses = wagmi.useContractInfiniteReads({
+        //     cacheKey: "synths",
+        //     ...wagmi.paginatedIndexesConfig(
+        //         (index) => {
+        //             return [
+        //                 {
+        //                     address: synterAddress.data,
+        //                     abi: SynterABI,
+        //                     functionName: "syntList",
+        //                     args: [BigNumber.from(index)] as const,
+        //                 }
+        //             ]
+        //         },
+        //         { start: 0, perPage: 20, direction: 'increment' },
+        //     ),
+        // })
+        // console.log("SYNTHSLIST", availableSynthsAddresses.data?.pages[0]);
 
-        const synterAddress = wagmi.useContractRead({
-            address: SynergyAddress,
-            abi: SynergyABI,
-            functionName: "synter"
-        })
-        const totalSynths = wagmi.useContractRead({
-            address: synterAddress.data,
-            abi: SynterABI,
-            functionName: "totalSynts",
-        })
-        const availableSynthsAddresses = wagmi.useContractInfiniteReads({
-            cacheKey: "synths",
-            ...wagmi.paginatedIndexesConfig(
-                (index) => {
-                    return [
+        // const synthsSymbols = wagmi.useContractReads({
+        //     contracts: availableSynthsAddresses.data?.pages[0].filter(address => address).map((address) => {
+        //         return {
+        //             address: address,
+        //             abi: SyntABI,
+        //             functionName: "symbol",
+        //         }
+        //     }),
+        // })
+        // const synths: FrontendSynth[] = synthsSymbols.data?.map((symbol) => {
+        //     const index = synthsSymbols.data?.indexOf(symbol) ?? 0;
+        //     return {
+        //         address: availableSynthsAddresses.data?.pages[0][index],
+        //         fullName: symbol,
+        //         symbol: symbol,
+        //         tradingViewSymbol: tradingViewSymbols[symbol],
+        //     }
+        // }) ?? [];
+        // console.log("SYMBOLS", synthsSymbols.data);
+        // console.log("SYNTHS", synths)
+        return [
+            {
+                address: "0x0e8063A6206D846f941BC74869f085267c8AD469",
+                fullName: "rUSD",
+                symbol: "rUSD",
+                tradingViewSymbol: "-"
+            },
+            {
+                address: "0x203583737BEFABf17587c363F7ea27f3E3379e2B",
+                fullName: "rGLD",
+                symbol: "rGLD",
+                tradingViewSymbol: tradingViewSymbols["rGLD"],
+            },
+            {
+                address: "0x3a98193436a7B488b6C5ACA7caEa032350b21d5d",
+                fullName: "rGAS",
+                symbol: "rGAS",
+                tradingViewSymbol: tradingViewSymbols["rGLD"],
+            },
                         {
-                            address: synterAddress.data,
-                            abi: SynterABI,
-                            functionName: "syntList",
-                            args: [BigNumber.from(index)] as const,
-                        }
-                    ]
-                },
-                { start: 0, perPage: 20, direction: 'increment' },
-            ),
-        })
-        console.log("SYNTHSLIST", availableSynthsAddresses.data?.pages[0]);
-
-        const synthsSymbols = wagmi.useContractReads({
-            contracts: availableSynthsAddresses.data?.pages[0].filter(address => address).map((address) => {
-                return {
-                    address: address,
-                    abi: SyntABI,
-                    functionName: "symbol",
-                }
-            }),
-        })
-        const synths: FrontendSynth[] = synthsSymbols.data?.map((symbol) => {
-            const index = synthsSymbols.data?.indexOf(symbol) ?? 0;
-            return {
-                address: availableSynthsAddresses.data?.pages[0][index],
-                fullName: symbol,
-                symbol: symbol,
-                tradingViewSymbol: tradingViewSymbols[symbol],
+                address: "0xae29c62Af11ce718d7bE506e2d04806164263a29",
+                fullName: "rHPI",
+                symbol: "rHPI",
+                tradingViewSymbol: "-",
             }
-        }) ?? [];
-        console.log("SYMBOLS", synthsSymbols.data);
-        console.log("SYNTHS", synths)
-        return synths ?? [];
+        ]
     }
 
     getCurrentCRatio(): number | undefined {
@@ -684,6 +708,44 @@ class EthereumNetwork extends BaseNetwork {
         if (debt.data !== undefined && debt.data !== null) {
             const debtRusd = new Amount(debt.data, 18)
             return debtRusd;
+        }
+        return undefined;
+    }
+
+    predictBorrowCollateralRatio(
+        borrowId: string | undefined,
+        synthAddress: string,
+        amountToBorrow: Amount,
+        amountToPledge: Amount,
+        increase: boolean
+    ): number | undefined {
+        return undefined
+    }
+
+    getRusdLoanAllowance(): Amount | undefined {
+        const account = wagmi.useAccount();
+        const rusdAddress = wagmi.useContractRead({
+            address: SynergyAddress,
+            abi: SynergyABI,
+            functionName: "rUsd",
+        });
+        const loanAddress = wagmi.useContractRead({
+            address: SynergyAddress,
+            abi: SynergyABI,
+            functionName: "loan",
+        });
+        const rusdAllowance = wagmi.useContractRead({
+            address: rusdAddress.data as string,
+            abi: RawABI,
+            functionName: "allowance",
+            args: [account.address, loanAddress.data],
+            watch: true
+        });
+        if (
+            rusdAllowance.data !== undefined
+        ) {
+            const balance: BigNumber = rusdAllowance.data as BigNumber;
+            return new Amount(balance, 18);
         }
         return undefined;
     }

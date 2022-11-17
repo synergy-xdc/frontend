@@ -40,67 +40,254 @@ const ActivePositionsPlaceholder = [
     },
 ];
 
+const LoanSynth: NextComponentType = () => {
+    const networkProvider = React.useContext(NetworkContext);
+    const toaster = useToaster();
+
+    const rusdBalance = networkProvider.getRusdBalance();
+    const rusdLoanAllowance = networkProvider.getRusdLoanAllowance();
+
+    const availableSynths = networkProvider.getAvailableSynths();
+
+    const [synthAddressToBorrow, setSynthAddressToBorrow] = React.useState<string>(availableSynths[availableSynths.length - 1].address);
+    const [amountToBorrow, setAmountToBorrow] = React.useState<Amount>(
+        new Amount(BigNumber.from(0), 18)
+    );
+    const [amountToPledge, setAmountToPledge] = React.useState<Amount>(
+        new Amount(BigNumber.from(0), 18)
+    );
+    const synthBalance = networkProvider.getSynthBalance(synthAddressToBorrow);
+    const synthPrice = networkProvider.synthPrice(synthAddressToBorrow);
+
+    return (
+        <Panel bordered shaded header="Borrowing">
+            <div style={{ textAlign: "left" }}>
+                <Form.Group>
+                    <SelectPicker
+                        // size="lg"
+                        label="Synth"
+                        data={
+                            availableSynths.map((inst) => {
+                                return {
+                                    label: inst.fullName,
+                                    value: inst.address
+                                }
+                            })
+                        }
+                        block
+                        onChange={setSynthAddressToBorrow}
+                        // cleanable={false}
+                        defaultValue={synthAddressToBorrow}
+                    />
+                </Form.Group>
+                <br />
+                <Form.Group controlId="_">
+                    <Form.ControlLabel>Borrow amount (synth)</Form.ControlLabel>
+                    <InputGroup style={{ marginTop: 5, marginBottom: 5 }}>
+                        <InputGroup.Button
+                            onClick={() =>
+                                setAmountToBorrow(
+                                    new Amount(
+                                        amountToBorrow.amount.sub(
+                                            BigNumber.from(10).pow(amountToBorrow.decimals + 1)
+                                        ),
+                                        amountToBorrow.decimals
+                                    )
+                                )
+                            }
+                        >
+                            -
+                        </InputGroup.Button>
+                        <InputNumber
+                            className="no-arrows-input-number"
+                            // step={10.1}
+                            value={amountToBorrow.toHumanString(2)}
+                            onChange={(val) =>
+                                setAmountToBorrow(
+                                    Amount.fromString(
+                                        typeof val == "string" ? val : val.toString(),
+                                        amountToBorrow.decimals
+                                    )
+                                )
+                            }
+                        />
+                        <InputGroup.Button
+                            onClick={() =>
+                                setAmountToBorrow(
+                                    new Amount(
+                                        amountToBorrow.amount.add(
+                                            BigNumber.from(10).pow(amountToBorrow.decimals + 1)
+                                        ),
+                                        amountToBorrow.decimals
+                                    )
+                                )
+                            }
+                        >
+                            +
+                        </InputGroup.Button>
+                    </InputGroup>
+                    <Form.HelpText>Balance: {synthBalance?.toHumanString(4)} (price: {synthPrice?.toHumanString(6)}$)</Form.HelpText>
+                </Form.Group>
+                <br />
+                <Form.Group controlId="_">
+                    <Form.ControlLabel>Pledge amount (rUSD)</Form.ControlLabel>
+                    <InputGroup style={{ marginTop: 5, marginBottom: 5 }}>
+                        <InputGroup.Button
+                            onClick={() =>
+                                setAmountToPledge(
+                                    new Amount(
+                                        amountToPledge.amount.sub(
+                                            BigNumber.from(10).pow(amountToPledge.decimals + 1)
+                                        ),
+                                        amountToPledge.decimals
+                                    )
+                                )
+                            }
+                        >
+                            -
+                        </InputGroup.Button>
+                        <InputNumber
+                            className="no-arrows-input-number"
+                            value={amountToPledge.toHumanString(18)}
+                            onChange={(val) =>
+                                setAmountToPledge(
+                                    Amount.fromString(
+                                        typeof val == "string" ? val : val.toString(),
+                                        amountToPledge.decimals
+                                    )
+                                )
+                            }
+                        />
+                        <InputGroup.Button
+                            onClick={() =>
+                                setAmountToPledge(
+                                    new Amount(
+                                        amountToPledge.amount.add(
+                                            BigNumber.from(10).pow(amountToPledge.decimals + 1)
+                                        ),
+                                        amountToPledge.decimals
+                                    )
+                                )
+                            }
+                        >
+                            +
+                        </InputGroup.Button>
+                    </InputGroup>
+                    <Form.HelpText>Balance: {rusdBalance?.toHumanString(4)}</Form.HelpText>
+                    <Form.HelpText>Allowance: {rusdLoanAllowance?.toHumanString(4)}</Form.HelpText>
+                </Form.Group>
+                <hr />
+                <Form.HelpText>
+                    Current C-ratio: {networkProvider.getCurrentCRatio()}%
+                </Form.HelpText>
+                <Form.HelpText>
+                    New C-ratio:{" "}
+                    {networkProvider.predictCollateralRatio(amountToBorrow, amountToPledge, true)}%
+                </Form.HelpText>
+                <Form.HelpText>
+                    Min C-ratio: {networkProvider.getMinCRatio()}%
+                </Form.HelpText>
+                <br />
+                <ButtonGroup justified>
+                    <Button
+                        style={{
+                            borderColor: "#f26d9e",
+                            // backgroundColor: "#ed4580",
+                            color: "#f26d9e",
+                            borderWidth: 2
+                        }}
+                        disabled={
+                            parseFloat(rusdLoanAllowance?.toHumanString(18)) >=
+                            parseFloat(amountToPledge?.toHumanString(18))
+                        }
+                        appearance="ghost"
+                    >
+                        <b>Approve</b>
+                    </Button>
+                    <Button
+                        style={{
+                            borderColor: "#f26d9e",
+                            // backgroundColor: "#ed4580",
+                            color: "#f26d9e",
+                            borderWidth: 2
+                        }}
+                        disabled={
+                            parseFloat(rusdLoanAllowance?.toHumanString(18)) <
+                            parseFloat(amountToPledge?.toHumanString(18))
+                        }
+                        appearance="ghost"
+                    >
+                        <b>Borrow</b>
+                    </Button>
+                </ButtonGroup>
+
+            </div>
+        </Panel>
+    );
+
+
+}
+
 const TradeThePair: NextComponentType = () => {
     const [positionRusdValue, setPositionRusdValue] = React.useState<number>(10);
     const networkProvider = React.useContext(NetworkContext);
     const rusdBalance = networkProvider.getRusdBalance();
 
     return (
-        <></>
-        // <Panel bordered shaded header="Trade the Synth">
-        //   <div style={{ textAlign: "left" }}>
-        //     <Form.Group controlId="_">
-        //       <Form.ControlLabel>Invest rUSD amount</Form.ControlLabel>
-        //       <InputGroup style={{ marginTop: 5, marginBottom: 5 }}>
-        //         <InputGroup.Button
-        //           onClick={() => setPositionRusdValue(positionRusdValue + 10)}
-        //         >
-        //           -
-        //         </InputGroup.Button>
-        //         <InputNumber
-        //           className="no-arrows-input-number"
-        //           value={positionRusdValue}
-        //           onChange={
-        //             (val) => setPositionRusdValue(parseInt(val)) // @ts-ignore
-        //           }
-        //         />
-        //         <InputGroup.Button
-        //           onClick={() => setPositionRusdValue(positionRusdValue + 10)}
-        //         >
-        //           +
-        //         </InputGroup.Button>
-        //       </InputGroup>
+        <Panel bordered shaded header="Trade the Synth">
+          <div style={{ textAlign: "left" }}>
+            <Form.Group controlId="_">
+              <Form.ControlLabel>Invest rUSD amount</Form.ControlLabel>
+              <InputGroup style={{ marginTop: 5, marginBottom: 5 }}>
+                <InputGroup.Button
+                  onClick={() => setPositionRusdValue(positionRusdValue + 10)}
+                >
+                  -
+                </InputGroup.Button>
+                <InputNumber
+                  className="no-arrows-input-number"
+                  value={positionRusdValue}
+                  onChange={
+                    (val) => setPositionRusdValue(parseInt(val)) // @ts-ignore
+                  }
+                />
+                <InputGroup.Button
+                  onClick={() => setPositionRusdValue(positionRusdValue + 10)}
+                >
+                  +
+                </InputGroup.Button>
+              </InputGroup>
 
-        //       <Form.HelpText>
-        //         Balance: {rusdBalance?.toHumanString(4)}
-        //       </Form.HelpText>
-        //     </Form.Group>
-        //     <ButtonGroup style={{ marginTop: 12 }} justified>
-        //       <Button
-        //         style={{
-        //           borderColor: "#82363a",
-        //           backgroundColor: "#f33645",
-        //           color: "#FFF",
-        //         }}
-        //         appearance="primary"
-        //         color="red"
-        //       >
-        //         <b>Short</b>
-        //       </Button>
-        //       <Button
-        //         style={{
-        //           borderColor: "#1d5f5e",
-        //           backgroundColor: "#089a81",
-        //           color: "#FFF",
-        //         }}
-        //         appearance="primary"
-        //         color="green"
-        //       >
-        //         <b>Long</b>
-        //       </Button>
-        //     </ButtonGroup>
-        //   </div>
-        // </Panel>
+              <Form.HelpText>
+                Balance: {rusdBalance?.toHumanString(4)}
+              </Form.HelpText>
+            </Form.Group>
+            <ButtonGroup style={{ marginTop: 12 }} justified>
+              <Button
+                style={{
+                  borderColor: "#82363a",
+                  backgroundColor: "#f33645",
+                  color: "#FFF",
+                }}
+                appearance="primary"
+                color="red"
+              >
+                <b>Short</b>
+              </Button>
+              <Button
+                style={{
+                  borderColor: "#1d5f5e",
+                  backgroundColor: "#089a81",
+                  color: "#FFF",
+                }}
+                appearance="primary"
+                color="green"
+              >
+                <b>Long</b>
+              </Button>
+            </ButtonGroup>
+          </div>
+        </Panel>
     );
 };
 
@@ -108,14 +295,6 @@ const SwapSynthes: NextComponentType = () => {
     const networkProvider = React.useContext(NetworkContext);
     const toaster = useToaster();
     const availableSynths = networkProvider.getAvailableSynths();
-    if (!availableSynths.find((elem) => elem.symbol === "rUSD")) {
-            availableSynths.push({
-                address: "0x0e8063A6206D846f941BC74869f085267c8AD469",
-                fullName: "rUSD",
-                symbol: "rUSD",
-                tradingViewSymbol: "-"
-            })
-    }
 
     const [synthFromAmount, setSynthFromAmount] = React.useState<Amount>(
         new Amount(BigNumber.from(0), 18)
@@ -139,20 +318,6 @@ const SwapSynthes: NextComponentType = () => {
         swapMethod === "swapFrom" ? synthFromAmount : synthToAmount,
         getStateHandlingCallback(toaster)
     );
-
-    // let priceQ = synthFromPrice?.amount / synthToPrice?.amount;
-    // if (isNaN(priceQ) || priceQ === null || priceQ === undefined) {
-    //     priceQ = 1
-    // }
-
-    // const newSynthFromAmountAfterReset = new Amount(utils.parseUnits(
-    //     (priceQ * parseFloat(synthFromAmount.toHumanString(18))).toPrecision(12).toString(),
-    //     18
-    // ), 18);
-    // const newSynthToAmountAfterReset = new Amount(utils.parseUnits(
-    //     ((1 / priceQ) * parseFloat(synthToAmount.toHumanString(18))).toPrecision(12).toString(),
-    //     18
-    // ), 18);
 
     return (
         <Panel bordered shaded header="Swap Synthes">
@@ -373,7 +538,7 @@ const TradingView: NextComponentType = () => {
                         <br />
                         <FlexboxGrid.Item colspan={23}>
                             <AdvancedRealTimeChart
-                                height={780}
+                                height={820}
                                 width="auto"
                                 theme="dark"
                                 symbol={availableSynths.find(inst => inst.address === tradingSynthAddress)?.tradingViewSymbol}
@@ -386,29 +551,10 @@ const TradingView: NextComponentType = () => {
                 </FlexboxGrid.Item>
 
                 <FlexboxGrid.Item colspan={6}>
-                    <TradeThePair />
-                    <br />
+                    {/* <TradeThePair /> */}
                     <SwapSynthes />
                     <br />
-                    <Panel bordered shaded header="Investment Portfolio">
-                        <InputGroup>
-                            <InputGroup.Addon>Total $</InputGroup.Addon>
-                            <Input readOnly value="1823.32" />
-                        </InputGroup>
-                        <br />
-                        <InputGroup>
-                            <InputGroup.Addon>Found Synth</InputGroup.Addon>
-                            <Input readOnly value="2" />
-                        </InputGroup>
-                        <br />
-                        <InputGroup>
-                            <InputGroup.Addon>C-ratio</InputGroup.Addon>
-                            <Input readOnly value="214%" />
-                        </InputGroup>
-                        <Form.HelpText style={{ marginTop: 5 }}>
-                            Min allowed: 150%
-                        </Form.HelpText>
-                    </Panel>
+                    <LoanSynth />
                 </FlexboxGrid.Item>
             </FlexboxGrid>
             <Panel style={{ marginLeft: 23 }} shaded bordered header="Your synth">

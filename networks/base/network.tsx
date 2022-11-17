@@ -60,11 +60,13 @@ abstract class BaseNetwork {
     abstract getCurrentCRatio(): number | undefined
     abstract getMinCRatio(): number | undefined
     abstract getRawInsuranceAllowance(): Amount | undefined
+    abstract getRusdLoanAllowance(): Amount | undefined
     abstract getNewWethAllowanceCallback(
         amount: Amount,
         tx_state_changes_callback: (state: TXState) => void
     ): Function
     abstract predictCollateralRatio(amountToMint: Amount, amountToPledge: Amount, increase: boolean): number | undefined
+    abstract predictBorrowCollateralRatio(amountToMint: Amount, amountToPledge: Amount, increase: boolean): number | undefined
     abstract getMintCallback(
         amountToMint: Amount,
         amountToPledge: Amount,

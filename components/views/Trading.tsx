@@ -502,6 +502,7 @@ const ActiveOrdersTable: NextComponentType = () => {
 const TradingView: NextComponentType = () => {
     const networkProvider = React.useContext(NetworkContext);
     const availableSynths = networkProvider.getAvailableSynths();
+    console.log("TRADEADDR", availableSynths[0]?.fullName)
     const [tradingSynthAddress, setTradingSynthAddress] = React.useState<string>(availableSynths[0]?.address);
 
     return (

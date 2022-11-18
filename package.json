@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "deploy": "NEXT_DEV=0 && next build && next export && cd out && touch .nojekyll && git init && git remote add origin https://github.com/synergy-chainlink/synergy-chainlink.github.io&& git add --all && git commit -m 'initial' && git push origin main -f && cd .."
+    "deploy": "NEXT_DEV=0 && next build && next export && cd out && touch .nojekyll && git init && git remote add origin https://github.com/synergy-chainlink/synergy-chainlink.github.io&& git add --all && git commit -m 'initial' && git push origin main -f && cd ..",
+    "deploy-win": "next build && next export && cd out && type nul > .nojekyll && git init && git remote add origin https://github.com/synergy-chainlink/synergy-chainlink.github.io&& git add --all && git commit -m 'initial' && git push origin main -f && cd .."
   },
   "dependencies": {
     "@svgr/webpack": "^6.5.1",

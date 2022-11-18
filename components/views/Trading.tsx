@@ -308,6 +308,35 @@ const TradeThePair: NextComponentType = () => {
     );
 };
 
+
+const PatchBorrows: NextComponentType = () => {
+    const networkProvider = React.useContext(NetworkContext);
+    const toaster = useToaster();
+
+    const availableSynths = networkProvider.getAvailableSynths()
+
+    return (
+        <Panel bordered shaded>
+            {/* <SelectPicker
+                size="lg"
+                label="Borrows"
+                data={
+                    availableSynths.filter(elem => elem.symbol !== "rUSD").map((inst) => {
+                        return {
+                            label: inst.fullName,
+                            value: inst.address
+                        }
+                    })
+                }
+                style={{ width: 300, minWidth: 250 }}
+                onChange={setTradingSynthAddress}
+                // cleanable={false}
+                defaultValue={tradingSynthAddress}
+            /> */}
+        </Panel>
+    );
+}
+
 const SwapSynthes: NextComponentType = () => {
     const networkProvider = React.useContext(NetworkContext);
     const toaster = useToaster();
@@ -568,7 +597,7 @@ const TradingView: NextComponentType = () => {
                         <br />
                         <FlexboxGrid.Item colspan={23}>
                             <AdvancedRealTimeChart
-                                height={820}
+                                height={780}
                                 width="auto"
                                 theme="dark"
                                 symbol={availableSynths.find(inst => inst.address === tradingSynthAddress)?.tradingViewSymbol}
@@ -586,10 +615,7 @@ const TradingView: NextComponentType = () => {
                     <LoanSynth />
                 </FlexboxGrid.Item>
             </FlexboxGrid>
-            <Panel style={{ marginLeft: 23 }} shaded bordered header="Your synth">
-                <ActiveOrdersTable />
-                <br />
-            </Panel>
+            <PatchBorrows />
             <br />
         </>
     );

@@ -37,15 +37,27 @@ export interface FrontendUserInsurance {
     availableCompensationString: string,
 }
 
-// return [
-//   {
-//     id: 123123,
-//     raw_locked: 10,
-//     locked_at: 2342134123123,
-//     available_at: 1212312312312,
-//     raw_repaid: 5,
-//   },
-// ];
+export interface FrontendLoan {
+    borrowedAt: Date,
+    synthAddress: string,
+    synthSymbol: string,
+    borrowedSynthAmount: Amount,
+    collateral: number,
+    minCollateralRatio: number
+}
+
+export interface ContractLoan {
+    user: string,
+    syntAddress: string,
+    borrowed: BigNumber,
+    collateral: BigNumber,
+    minCollateralRatio: number,
+    liquidationCollateralRatio : number,
+    liquidationPenalty: number,
+    treasuryFee: number,
+    loanIndex: number
+}
+
 
 abstract class BaseNetwork {
     abstract showWallet(): WalletPrimaryData | undefined
@@ -138,6 +150,7 @@ abstract class BaseNetwork {
     ): Function
     abstract totalLongs(synthAddress: string): Amount | undefined
     abstract totalShorts(synthAddress: string) : Amount | undefined
+    abstract userLoans(): FrontendLoan[]
 }
 
 

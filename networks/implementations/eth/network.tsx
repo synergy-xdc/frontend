@@ -22,7 +22,7 @@ import { BigNumber, ethers, utils } from "ethers";
 
 import React from "react";
 import Amount from "@/networks/base/amount";
-import BaseNetwork, { ContractUserInsurance, FrontendSynth, FrontendUserInsurance, WalletPrimaryData } from "@/networks/base/network";
+import BaseNetwork, { ContractUserInsurance, FrontendLoan, FrontendSynth, FrontendUserInsurance, WalletPrimaryData } from "@/networks/base/network";
 import TXState, { ContractWriteAccess } from "@/networks/base/txstate";
 import { sign } from "crypto";
 import { Button, toaster, useToaster } from "rsuite";
@@ -1147,6 +1147,43 @@ class EthereumNetwork extends BaseNetwork {
             return amount;
         }
         return undefined;
+    }
+
+    userLoans(): FrontendLoan[] {
+        const account = wagmi.useAccount();
+        const loanAddress = wagmi.useContractRead({
+            address: SynergyAddress,
+            abi: SynergyABI,
+            functionName: "loan"
+        });
+        const userLoansHashes = wagmi.useContractInfiniteReads({
+            cacheKey: "userLoans",
+            ...wagmi.paginatedIndexesConfig(
+                (index) => {
+                    return [
+                        {
+                            address: loanAddress.data,
+                            abi: LoanABI,
+                            functionName: "userLoans",
+                            args: [account.address, BigNumber.from(index)] as const,
+                        }
+                    ]
+                },
+                { start: 0, perPage: 20, direction: 'increment' },
+            ),
+        })
+        const loansDetail = wagmi.useContractReads({
+            contracts: userLoansHashes.data?.pages[0].filter(hash => hash).map((hash) => {
+                return {
+                    address: loanAddress.data,
+                    abi: LoanABI,
+                    functionName: "loans",
+                    args: [hash]
+                }
+            }),
+        })
+        
+
     }
 
 

@@ -365,8 +365,8 @@ const WithdrawBorrows: NextComponentType = () => {
                 setValue={setAmoutToWithdraw}
                 decimalsShift={1}
             >
-                <Form.HelpText>New C-Ration: {predictedCRation}%</Form.HelpText>
-                <Form.HelpText>Min C-Ration: {selectedBorrowDetail?.minCollateralRatio}%</Form.HelpText>
+                <Form.HelpText>New C-Ratio: {predictedCRation}%</Form.HelpText>
+                <Form.HelpText>Min C-Ratio: {selectedBorrowDetail?.minCollateralRatio}%</Form.HelpText>
             </InputAmount>
             <br />
             <Button
@@ -434,8 +434,8 @@ const RepayBorrow: NextComponentType = () => {
                 setValue={setAmoutToRepay}
                 decimalsShift={1}
             >
-                <Form.HelpText>New C-Ration: {predictedCRation}%</Form.HelpText>
-                <Form.HelpText>Min C-Ration: {selectedBorrowDetail?.minCollateralRatio}%</Form.HelpText>
+                <Form.HelpText>New C-Ratio: {predictedCRation}%</Form.HelpText>
+                <Form.HelpText>Min C-Ratio: {selectedBorrowDetail?.minCollateralRatio}%</Form.HelpText>
             </InputAmount>
             <br />
             <Button
@@ -509,8 +509,8 @@ const DepositBorrows: NextComponentType = () => {
                 decimalsShift={1}
             >
                 <Form.HelpText>Allowance: {rusdLoanAllowance?.toHumanString(2)}</Form.HelpText>
-                <Form.HelpText>New C-Ration: {predictedCRation}%</Form.HelpText>
-                <Form.HelpText>Min C-Ration: {selectedBorrowDetail?.minCollateralRatio}%</Form.HelpText>
+                <Form.HelpText>New C-Ratio: {predictedCRation}%</Form.HelpText>
+                <Form.HelpText>Min C-Ratio: {selectedBorrowDetail?.minCollateralRatio}%</Form.HelpText>
             </InputAmount>
             <br />
             <ButtonGroup justified>

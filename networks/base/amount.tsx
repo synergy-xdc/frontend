@@ -27,6 +27,13 @@ export default class Amount {
         )
     }
 
+    divAmount(other: Amount): Amount {
+        return new Amount(
+            this.amount.div(other.amount),
+            this.decimals - other.decimals
+        )
+    }
+
     static fromString(val: string, decimals: number): Amount {
         return new Amount(utils.parseUnits(isNaN(parseInt(val)) ? "0" : val, decimals), decimals)
     }

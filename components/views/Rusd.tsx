@@ -578,7 +578,7 @@ const Burn: NextComponentType = () => {
                         defaultValue={"0x0000000000000000000000000000000000000000000000000000000000000000"}
                     />
                 </div>
-                <Form.HelpText>Current RAW repay: {rawRepay?.toHumanString(4)} ({rawPrice ? rawRepay?.mulAmount(rawPrice).toHumanString(2) : 0}$, price: {rawPrice?.toHumanString(5)}$)</Form.HelpText>
+                <Form.HelpText>Max RAW compensation: {rawPrice && rawRepay ? rawRepay.amount.div(rawPrice.amount).toNumber() : 0} ({rawRepay?.toHumanString(4)}$, price: {rawPrice?.toHumanString(5)}$)</Form.HelpText>
                 <Form.HelpText>
                     New C-ratio: {BurnNewCRatio}%
                 </Form.HelpText>

@@ -66,7 +66,13 @@ abstract class BaseNetwork {
         tx_state_changes_callback: (state: TXState) => void
     ): Function
     abstract predictCollateralRatio(amountToMint: Amount, amountToPledge: Amount, increase: boolean): number | undefined
-    abstract predictBorrowCollateralRatio(amountToMint: Amount, amountToPledge: Amount, increase: boolean): number | undefined
+    abstract predictBorrowCollateralRatio(
+        borrowId: string | undefined,
+        synthAddress: string,
+        amountToBorrow: Amount,
+        amountToPledge: Amount,
+        increase: boolean
+    ): number | undefined
     abstract getMintCallback(
         amountToMint: Amount,
         amountToPledge: Amount,
@@ -111,6 +117,26 @@ abstract class BaseNetwork {
         amount: Amount,
         tx_state_changes_callback: (state: TXState) => void,
     ): Function
+    abstract borrowSynthCallback(
+        synthAddress: string, 
+        amountToBorrrow: Amount,
+        amountToPledge: Amount,
+        tx_state_changes_callback: (state: TXState) => void,
+    ): Function
+    abstract setRusdLoanAllowanceCallback(
+        amount: Amount,
+        tx_state_changes_callback: (state: TXState) => void,
+    ): Function
+    abstract minLoanColateralRatio(): number | undefined
+    abstract mintWethCallback(
+        amount: Amount,
+        tx_state_changes_callback: (state: TXState) => void,
+    ): Function
+    abstract mintRawCallback(
+        amount: Amount,
+        tx_state_changes_callback: (state: TXState) => void,
+    ): Function
+
 
 }
 

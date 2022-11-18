@@ -46,7 +46,7 @@ const LoanSynth: NextComponentType = () => {
 
     const rusdBalance = networkProvider.getRusdBalance();
     const rusdLoanAllowance = networkProvider.getRusdLoanAllowance();
-
+    const minLoanCRatio = networkProvider.minLoanColateralRatio()
     const availableSynths = networkProvider.getAvailableSynths();
 
     const [synthAddressToBorrow, setSynthAddressToBorrow] = React.useState<string>(availableSynths[availableSynths.length - 1].address);
@@ -58,6 +58,25 @@ const LoanSynth: NextComponentType = () => {
     );
     const synthBalance = networkProvider.getSynthBalance(synthAddressToBorrow);
     const synthPrice = networkProvider.synthPrice(synthAddressToBorrow);
+
+    const predictedCRatio = networkProvider.predictBorrowCollateralRatio(
+        undefined,
+        synthAddressToBorrow,
+        amountToBorrow,
+        amountToPledge,
+        true
+    )
+
+    const borrowCallback = networkProvider.borrowSynthCallback(
+        synthAddressToBorrow,
+        amountToBorrow,
+        amountToPledge,
+        getStateHandlingCallback(toaster)
+    );
+    const approveCallback = networkProvider.setRusdLoanAllowanceCallback(
+        amountToPledge,
+        getStateHandlingCallback(toaster)
+    );
 
     return (
         <Panel bordered shaded header="Borrowing">
@@ -178,14 +197,10 @@ const LoanSynth: NextComponentType = () => {
                 </Form.Group>
                 <hr />
                 <Form.HelpText>
-                    Current C-ratio: {networkProvider.getCurrentCRatio()}%
+                    New C-ratio: {predictedCRatio}%
                 </Form.HelpText>
                 <Form.HelpText>
-                    New C-ratio:{" "}
-                    {networkProvider.predictCollateralRatio(amountToBorrow, amountToPledge, true)}%
-                </Form.HelpText>
-                <Form.HelpText>
-                    Min C-ratio: {networkProvider.getMinCRatio()}%
+                    Min C-ratio: {minLoanCRatio}%
                 </Form.HelpText>
                 <br />
                 <ButtonGroup justified>
@@ -200,6 +215,7 @@ const LoanSynth: NextComponentType = () => {
                             parseFloat(rusdLoanAllowance?.toHumanString(18)) >=
                             parseFloat(amountToPledge?.toHumanString(18))
                         }
+                        onClick={async () => {approveCallback()}}
                         appearance="ghost"
                     >
                         <b>Approve</b>
@@ -211,6 +227,7 @@ const LoanSynth: NextComponentType = () => {
                             color: "#f26d9e",
                             borderWidth: 2
                         }}
+                        onClick={async () => {borrowCallback()}}
                         disabled={
                             parseFloat(rusdLoanAllowance?.toHumanString(18)) <
                             parseFloat(amountToPledge?.toHumanString(18))
@@ -502,7 +519,7 @@ const TradingView: NextComponentType = () => {
                                         size="lg"
                                         label="Synth"
                                         data={
-                                            availableSynths.map((inst) => {
+                                            availableSynths.filter(elem => elem.symbol !== "rUSD").map((inst) => {
                                                 return {
                                                     label: inst.fullName,
                                                     value: inst.address

@@ -1,6 +1,7 @@
 import type { NextComponentType } from "next/types";
 import HomeIcon from "@rsuite/icons/legacy/Home";
 import DragableIcon from "@rsuite/icons/Dragable";
+import ScatterIcon from '@rsuite/icons/Scatter';
 import TrendIcon from "@rsuite/icons/Trend";
 import {
     Navbar,
@@ -120,6 +121,15 @@ const Navigation: FC<{
                         icon={<DragableIcon />}
                     >
                         Mint/Burn rUSD
+                    </Nav.Item>
+                    <Nav.Item
+                        as={NavLink}
+                        href="/faucet"
+                        active={active == "faucet"}
+                        style={NavItemStyle}
+                        icon={<ScatterIcon />}
+                    >
+                        Faucet
                     </Nav.Item>
                 </Nav>
                 <Nav pullRight>

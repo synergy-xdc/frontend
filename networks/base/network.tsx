@@ -38,6 +38,7 @@ export interface FrontendUserInsurance {
 }
 
 export interface FrontendLoan {
+    borrowId: string,
     borrowedAt: Date,
     synthAddress: string,
     synthSymbol: string,
@@ -48,6 +49,7 @@ export interface FrontendLoan {
 
 export interface ContractLoan {
     user: string,
+    timestamp: BigNumber,
     syntAddress: string,
     borrowed: BigNumber,
     collateral: BigNumber,
@@ -151,6 +153,11 @@ abstract class BaseNetwork {
     abstract totalLongs(synthAddress: string): Amount | undefined
     abstract totalShorts(synthAddress: string) : Amount | undefined
     abstract userLoans(): FrontendLoan[]
+    abstract withdrawLoanCallback(
+        borrowId: string,
+        amount: Amount,
+        tx_state_changes_callback: (state: TXState) => void,
+    ): Function
 }
 
 

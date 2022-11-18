@@ -22,7 +22,7 @@ import { BigNumber, ethers, utils } from "ethers";
 
 import React from "react";
 import Amount from "@/networks/base/amount";
-import BaseNetwork, { ContractUserInsurance, FrontendLoan, FrontendSynth, FrontendUserInsurance, WalletPrimaryData } from "@/networks/base/network";
+import BaseNetwork, { ContractLoan, ContractUserInsurance, FrontendLoan, FrontendSynth, FrontendUserInsurance, WalletPrimaryData } from "@/networks/base/network";
 import TXState, { ContractWriteAccess } from "@/networks/base/txstate";
 import { sign } from "crypto";
 import { Button, toaster, useToaster } from "rsuite";
@@ -67,6 +67,7 @@ class EthereumNetwork extends BaseNetwork {
     rusdLoanAllowance: TXState = TXState.Done;
     mintWethState: TXState = TXState.Done;
     mintRawState: TXState = TXState.Done;
+    withdrawLoanState: TXState = TXState.Done;
 
     showedTxs: string[] = [];
 
@@ -1149,7 +1150,7 @@ class EthereumNetwork extends BaseNetwork {
         return undefined;
     }
 
-    userLoans(): FrontendLoan[] {
+    userLoans(): FrontendLoan[] | undefined {
         const account = wagmi.useAccount();
         const loanAddress = wagmi.useContractRead({
             address: SynergyAddress,
@@ -1172,6 +1173,7 @@ class EthereumNetwork extends BaseNetwork {
                 { start: 0, perPage: 20, direction: 'increment' },
             ),
         })
+        userLoansHashes.refetch()
         const loansDetail = wagmi.useContractReads({
             contracts: userLoansHashes.data?.pages[0].filter(hash => hash).map((hash) => {
                 return {
@@ -1182,8 +1184,74 @@ class EthereumNetwork extends BaseNetwork {
                 }
             }),
         })
-        
+        loansDetail.refetch()
+        const loansSynthSymbol = wagmi.useContractReads({
+            contracts: loansDetail?.data?.filter(loan => loan).map((loan: ContractLoan) => {
+                return {
+                    address: loan.syntAddress,
+                    abi: SyntABI,
+                    functionName: "symbol",
+                }
+            }) ?? [],
+        })
+        const [frontendLoans, setFrontendLoans] = React.useState([]);
+        useEffect(() => {
+            setFrontendLoans(
+                userLoansHashes.data?.pages[0].filter(hash => hash).map((hash) => {
+                    const index = userLoansHashes.data?.pages[0].indexOf(hash);
+                    const detail: ContractLoan = loansDetail.data?.[index ?? 0] ?? {};
+                    return {
+                        borrowId: userLoansHashes.data?.pages[0][index],
+                        borrowedAt: new Date(detail.timestamp?.toNumber() * 1000),
+                        synthAddress: detail.syntAddress,
+                        synthSymbol: loansSynthSymbol?.data?.[index],
+                        borrowedSynthAmount: new Amount(detail.borrowed, 18),
+                        collateral: Math.round(detail.collateral / 10**6),
+                        minCollateralRatio: Math.round(detail.minCollateralRatio / 10**8)
+                    }
+                })
+            )
+        }, [loansDetail.data, loansSynthSymbol.data])
+        return frontendLoans;
 
+    }
+
+    withdrawLoanCallback(
+        borrowId: string,
+        amount: Amount,
+        tx_state_changes_callback: (state: TXState) => void,
+    ): Function {
+        const toaster = useToaster();
+        const loanAddress = wagmi.useContractRead({
+            address: SynergyAddress,
+            abi: SynergyABI,
+            functionName: "loan"
+        })
+        const broadcastConfig = wagmi.usePrepareContractWrite({
+            address: loanAddress.data,
+            abi: LoanABI,
+            functionName: "withdraw",
+            args: [borrowId, amount.amount],
+        });
+        const txSign = wagmi.useContractWrite(broadcastConfig.config);
+        const signWait = wagmi.useWaitForTransaction({
+            hash: txSign.data?.hash,
+        });
+        const newState = this._defineStateChangesCallback(
+            signWait.isFetching,
+            txSign.isLoading,
+            signWait.status,
+            this.withdrawLoanState,
+        );
+        if (this.withdrawLoanState !== newState) {
+            this.withdrawLoanState = newState;
+            tx_state_changes_callback(newState);
+        }
+        return this._writeContractOrShowErrorFunction(
+            broadcastConfig.error,
+            txSign.write,
+            toaster
+        )
     }
 
 

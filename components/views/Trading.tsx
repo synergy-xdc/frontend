@@ -1,5 +1,6 @@
 import { NetworkContext } from "@/networks/all";
 import Amount from "@/networks/base/amount";
+import { FrontendLoan } from "@/networks/base/network";
 import { BigNumber, utils } from "ethers";
 import type { NextComponentType } from "next";
 import React from "react";
@@ -20,6 +21,7 @@ import {
     Table,
     useToaster,
 } from "rsuite";
+import InputAmount from "../InputAmount";
 import { getStateHandlingCallback } from "../WalletNotification";
 
 
@@ -309,30 +311,55 @@ const TradeThePair: NextComponentType = () => {
 };
 
 
-const PatchBorrows: NextComponentType = () => {
+const WithdrawBorrows: NextComponentType = () => {
     const networkProvider = React.useContext(NetworkContext);
     const toaster = useToaster();
 
-    const availableSynths = networkProvider.getAvailableSynths()
+    const userLoans: FrontendLoan[] = networkProvider.userLoans();
+    const [selectedLoanId, setSelectedLoanId] = React.useState(undefined);
+    const [amountToWithdraw, setAmoutToWithdraw] = React.useState<Amount>(new Amount(BigNumber.from(0), 18))
+
+    const withdrawCallback = networkProvider.withdrawLoanCallback(
+        selectedLoanId,
+        amountToWithdraw,
+        getStateHandlingCallback(toaster)
+    );
 
     return (
-        <Panel bordered shaded>
-            {/* <SelectPicker
+        <Panel style={{marginLeft: 20}} bordered shaded header="Withdraw borrows">
+            <SelectPicker
+                block
                 size="lg"
                 label="Borrows"
                 data={
-                    availableSynths.filter(elem => elem.symbol !== "rUSD").map((inst) => {
+                    (userLoans ?? []).filter(elem => elem.synthSymbol !== "rUSD").map((inst) => {
                         return {
-                            label: inst.fullName,
-                            value: inst.address
+                            label: `${inst.borrowId.slice(0, 9)} (${inst.borrowedSynthAmount.toHumanString(5)} ${inst.synthSymbol}, ratio: ${inst.collateral}% over min ${inst.minCollateralRatio})`,
+                            value: inst.borrowId
                         }
                     })
                 }
                 style={{ width: 300, minWidth: 250 }}
-                onChange={setTradingSynthAddress}
-                // cleanable={false}
-                defaultValue={tradingSynthAddress}
-            /> */}
+                onChange={setSelectedLoanId}
+                cleanable={false}
+                defaultValue={selectedLoanId}
+            />
+            <br />
+            <InputAmount
+                title="Amount to withdraw (rUSD)"
+                value={amountToWithdraw}
+                setValue={setAmoutToWithdraw}
+                decimalsShift={1}
+            />
+            <br />
+            <Button
+                block
+                style={{backgroundColor: "#b8469b"}}
+                onClick={async () => {withdrawCallback()}}
+            >
+                Withdraw
+            </Button>
+
         </Panel>
     );
 }
@@ -615,7 +642,7 @@ const TradingView: NextComponentType = () => {
                     <LoanSynth />
                 </FlexboxGrid.Item>
             </FlexboxGrid>
-            <PatchBorrows />
+            <WithdrawBorrows />
             <br />
         </>
     );

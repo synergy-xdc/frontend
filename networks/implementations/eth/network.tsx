@@ -68,6 +68,8 @@ class EthereumNetwork extends BaseNetwork {
     mintWethState: TXState = TXState.Done;
     mintRawState: TXState = TXState.Done;
     withdrawLoanState: TXState = TXState.Done;
+    depositLoanState: TXState = TXState.Done;
+    repayLoanState: TXState = TXState.Done;
 
     showedTxs: string[] = [];
 
@@ -268,7 +270,7 @@ class EthereumNetwork extends BaseNetwork {
         return undefined;
     }
 
-    getAvailableSynths(): FrontendSynth[] {
+    getAvailableSynths(): undefined | FrontendSynth[] {
         // const synterAddress = wagmi.useContractRead({
         //     address: SynergyAddress,
         //     abi: SynergyABI,
@@ -295,6 +297,7 @@ class EthereumNetwork extends BaseNetwork {
         //         { start: 0, perPage: 20, direction: 'increment' },
         //     ),
         // })
+        // availableSynthsAddresses.refetch()
         // console.log("SYNTHSLIST", availableSynthsAddresses.data?.pages[0]);
 
         // const synthsSymbols = wagmi.useContractReads({
@@ -306,15 +309,33 @@ class EthereumNetwork extends BaseNetwork {
         //         }
         //     }),
         // })
-        // const synths: FrontendSynth[] = synthsSymbols.data?.map((symbol) => {
-        //     const index = synthsSymbols.data?.indexOf(symbol) ?? 0;
-        //     return {
-        //         address: availableSynthsAddresses.data?.pages[0][index],
-        //         fullName: symbol,
-        //         symbol: symbol,
-        //         tradingViewSymbol: tradingViewSymbols[symbol],
-        //     }
-        // }) ?? [];
+        // synthsSymbols.refetch()
+        // const rusdAddress = wagmi.useContractRead({
+        //     address: SynergyAddress,
+        //     abi: SynergyABI,
+        //     functionName: "rUsd"
+        // })
+        // const [availableSynths, setAvailableSynth] = React.useState<undefined | FrontendSynth[]>([]);
+        // useEffect(() => {
+        //     setAvailableSynth([
+        //         {
+        //             address: rusdAddress.data,
+        //             fullName: "rUSD",
+        //             symbol: "rUSD",
+        //             tradingViewSymbol: "-"
+        //         },
+        //         ...synthsSymbols.data?.map((symbol) => {
+        //             const index = synthsSymbols.data?.indexOf(symbol) ?? 0;
+        //             return {
+        //                 address: availableSynthsAddresses.data?.pages[0][index],
+        //                 fullName: symbol,
+        //                 symbol: symbol,
+        //                 tradingViewSymbol: tradingViewSymbols[symbol],
+        //             }
+        //         }) ?? []
+        //     ])
+        // }, [availableSynthsAddresses.data, synthsSymbols.data])
+        // return availableSynths;
         // console.log("SYMBOLS", synthsSymbols.data);
         // console.log("SYNTHS", synths)
         return [
@@ -405,7 +426,6 @@ class EthereumNetwork extends BaseNetwork {
             this.wethApproveState = wethApproveNewState;
             tx_state_changes_callback(wethApproveNewState);
         }
-        console.log(signWait.status);
         return this._writeContractOrShowErrorFunction(
             setWethAllowanceSignConfig.error,
             setWethAllowanceSign.write,
@@ -445,6 +465,7 @@ class EthereumNetwork extends BaseNetwork {
         amountToPledge: Amount,
         tx_state_changes_callback: (state: TXState) => void
     ): Function {
+        const allowance = this.getWethAllowance();
         const mintSignConfig = wagmi.usePrepareContractWrite({
             address: SynergyAddress,
             abi: SynergyABI,
@@ -494,12 +515,6 @@ class EthereumNetwork extends BaseNetwork {
         );
 
         if (this.burnState !== newBurnState) {
-            console.log(
-                signWait.isFetching,
-                burnSign.isLoading,
-                this.burnState,
-                newBurnState
-            );
             this.burnState = newBurnState;
             tx_state_changes_callback(newBurnState);
         }
@@ -615,10 +630,13 @@ class EthereumNetwork extends BaseNetwork {
 
     stakeRawCallback(
         amountToStake: Amount,
-        expireAt: Date, tx_state_changes_callback: (state: TXState) => void
+        expireAt: Date,
+        tx_state_changes_callback: (state: TXState) => void
     ): Function {
         const toaster = useToaster();
         const timeDelta = expireAt.getTime() - Date.now();
+        const allowance = this.getRawInsuranceAllowance();
+        console.log(expireAt.getTime(), Date.now());
         const stakeRawSignConfig = wagmi.usePrepareContractWrite({
             address: InsuranceAddress,
             abi: InsuranceABI,
@@ -727,8 +745,47 @@ class EthereumNetwork extends BaseNetwork {
         return undefined
     }
 
+    depositLoanCallback(
+        borrowId: string,
+        amount: Amount,
+        tx_state_changes_callback: (state: TXState) => void,
+    ): Function {
+        const toaster = useToaster();
+        const loanAddress = wagmi.useContractRead({
+            address: SynergyAddress,
+            abi: SynergyABI,
+            functionName: "loan"
+        })
+        const allowance = this.getRusdLoanAllowance();
+        const broadcastConfig = wagmi.usePrepareContractWrite({
+            address: loanAddress.data,
+            abi: LoanABI,
+            functionName: "deposit",
+            args: [borrowId, amount.amount],
+        });
+        const txSign = wagmi.useContractWrite(broadcastConfig.config);
+        const signWait = wagmi.useWaitForTransaction({
+            hash: txSign.data?.hash,
+        });
+        const newState = this._defineStateChangesCallback(
+            signWait.isFetching,
+            txSign.isLoading,
+            signWait.status,
+            this.depositLoanState,
+        );
+        if (this.depositLoanState !== newState) {
+            this.depositLoanState = newState;
+            tx_state_changes_callback(newState);
+        }
+        return this._writeContractOrShowErrorFunction(
+            broadcastConfig.error,
+            txSign.write,
+            toaster
+        )
+    }
+
     borrowSynthCallback(
-        synthAddress: string, 
+        synthAddress: string,
         amountToBorrrow: Amount,
         amountToPledge: Amount,
         tx_state_changes_callback: (state: TXState) => void,
@@ -739,13 +796,13 @@ class EthereumNetwork extends BaseNetwork {
             abi: SynergyABI,
             functionName: "loan",
         });
+        const allowance = this.getRusdLoanAllowance();
         const borrowSynthConfig = wagmi.usePrepareContractWrite({
             address: loanAddress.data as DynAddress,
             abi: LoanABI,
             functionName: "borrow",
             args: [synthAddress, amountToBorrrow.amount, amountToPledge.amount],
         });
-        console.log("BORROW", [synthAddress, amountToBorrrow.amount, amountToPledge.amount])
         const borrowSynthSign = wagmi.useContractWrite(borrowSynthConfig.config);
         const signWait = wagmi.useWaitForTransaction({
             hash: borrowSynthSign.data?.hash,
@@ -755,7 +812,7 @@ class EthereumNetwork extends BaseNetwork {
             signWait.isFetching,
             borrowSynthSign.isLoading,
             signWait.status,
-            this.rawApproveState,
+            this.borrowSynthState,
         );
         if (this.borrowSynthState !== borrowSynthNewState) {
             this.borrowSynthState = borrowSynthNewState;
@@ -891,7 +948,7 @@ class EthereumNetwork extends BaseNetwork {
         });
         const swapNewState = this._defineStateChangesCallback(
             signWait.isFetching,
-            swapConfig.isLoading,
+            swapSign.isLoading,
             signWait.status,
             this.swapState,
         );
@@ -942,7 +999,7 @@ class EthereumNetwork extends BaseNetwork {
             signWait.isFetching,
             unclockWethSign.isLoading,
             signWait.status,
-            this.rawApproveState,
+            this.unlockWethState,
         );
         if (this.unlockWethState !== unlockWethNewState) {
             this.unlockWethState = unlockWethNewState;
@@ -980,7 +1037,7 @@ class EthereumNetwork extends BaseNetwork {
             signWait.isFetching,
             txSign.isLoading,
             signWait.status,
-            this.rawApproveState,
+            this.mintWethState,
         );
         if (this.mintWethState !== newState) {
             this.mintWethState = newState;
@@ -1017,7 +1074,7 @@ class EthereumNetwork extends BaseNetwork {
             signWait.isFetching,
             txSign.isLoading,
             signWait.status,
-            this.rawApproveState,
+            this.mintRawState,
         );
         if (this.mintRawState !== newState) {
             this.mintRawState = newState;
@@ -1029,8 +1086,6 @@ class EthereumNetwork extends BaseNetwork {
             toaster
         )
     }
-
-
 
     getSynthBalance(synthAddress: string): Amount | undefined {
         const account = wagmi.useAccount();
@@ -1185,6 +1240,17 @@ class EthereumNetwork extends BaseNetwork {
             }),
         })
         loansDetail.refetch()
+        const loansCollateralRatio = wagmi.useContractReads({
+            contracts: userLoansHashes.data?.pages[0].filter(hash => hash).map((hash) => {
+                return {
+                    address: loanAddress.data,
+                    abi: LoanABI,
+                    functionName: "collateralRatio",
+                    args: [hash]
+                }
+            }),
+        })
+        loansCollateralRatio.refetch()
         const loansSynthSymbol = wagmi.useContractReads({
             contracts: loansDetail?.data?.filter(loan => loan).map((loan: ContractLoan) => {
                 return {
@@ -1194,20 +1260,23 @@ class EthereumNetwork extends BaseNetwork {
                 }
             }) ?? [],
         })
-        const [frontendLoans, setFrontendLoans] = React.useState([]);
+        loansSynthSymbol.refetch();
+        const [frontendLoans, setFrontendLoans] = React.useState<undefined | FrontendLoan[]>([]);
         useEffect(() => {
             setFrontendLoans(
                 userLoansHashes.data?.pages[0].filter(hash => hash).map((hash) => {
                     const index = userLoansHashes.data?.pages[0].indexOf(hash);
                     const detail: ContractLoan = loansDetail.data?.[index ?? 0] ?? {};
+                    const collateralRation: number = loansCollateralRatio.data?.[index ?? 0] ?? 0;
                     return {
                         borrowId: userLoansHashes.data?.pages[0][index],
                         borrowedAt: new Date(detail.timestamp?.toNumber() * 1000),
                         synthAddress: detail.syntAddress,
                         synthSymbol: loansSynthSymbol?.data?.[index],
                         borrowedSynthAmount: new Amount(detail.borrowed, 18),
-                        collateral: Math.round(detail.collateral / 10**6),
-                        minCollateralRatio: Math.round(detail.minCollateralRatio / 10**8)
+                        collateral: new Amount(detail.collateral, 18),
+                        collateralRation: Math.round(collateralRation / 10**6),
+                        minCollateralRatio: Math.round(detail.minCollateralRatio / 10**6)
                     }
                 })
             )
@@ -1245,6 +1314,44 @@ class EthereumNetwork extends BaseNetwork {
         );
         if (this.withdrawLoanState !== newState) {
             this.withdrawLoanState = newState;
+            tx_state_changes_callback(newState);
+        }
+        return this._writeContractOrShowErrorFunction(
+            broadcastConfig.error,
+            txSign.write,
+            toaster
+        )
+    }
+
+    repayLoanCallback(
+        borrowId: string,
+        amount: Amount,
+        tx_state_changes_callback: (state: TXState) => void,
+    ): Function {
+        const toaster = useToaster();
+        const loanAddress = wagmi.useContractRead({
+            address: SynergyAddress,
+            abi: SynergyABI,
+            functionName: "loan"
+        })
+        const broadcastConfig = wagmi.usePrepareContractWrite({
+            address: loanAddress.data,
+            abi: LoanABI,
+            functionName: "repay",
+            args: [borrowId, amount.amount],
+        });
+        const txSign = wagmi.useContractWrite(broadcastConfig.config);
+        const signWait = wagmi.useWaitForTransaction({
+            hash: txSign.data?.hash,
+        });
+        const newState = this._defineStateChangesCallback(
+            signWait.isFetching,
+            txSign.isLoading,
+            signWait.status,
+            this.repayLoanState,
+        );
+        if (this.repayLoanState !== newState) {
+            this.repayLoanState = newState;
             tx_state_changes_callback(newState);
         }
         return this._writeContractOrShowErrorFunction(

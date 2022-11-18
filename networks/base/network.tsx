@@ -43,16 +43,17 @@ export interface FrontendLoan {
     synthAddress: string,
     synthSymbol: string,
     borrowedSynthAmount: Amount,
-    collateral: number,
+    collateralRation: number,
+    collateral: Amount,
     minCollateralRatio: number
 }
 
 export interface ContractLoan {
     user: string,
-    timestamp: BigNumber,
     syntAddress: string,
     borrowed: BigNumber,
     collateral: BigNumber,
+    timestamp: BigNumber,
     minCollateralRatio: number,
     liquidationCollateralRatio : number,
     liquidationPenalty: number,
@@ -65,7 +66,7 @@ abstract class BaseNetwork {
     abstract showWallet(): WalletPrimaryData | undefined
     abstract connectButton(): ReactNode
     abstract getRusdBalance(): Amount | undefined
-    abstract getAvailableSynths(): FrontendSynth[]
+    abstract getAvailableSynths(): FrontendSynth[] | undefined
     abstract getRawBalance(): Amount | undefined
     abstract getWethBalance(): Amount | undefined
     abstract getRawPrice(): Amount | undefined
@@ -132,7 +133,7 @@ abstract class BaseNetwork {
         tx_state_changes_callback: (state: TXState) => void,
     ): Function
     abstract borrowSynthCallback(
-        synthAddress: string, 
+        synthAddress: string,
         amountToBorrrow: Amount,
         amountToPledge: Amount,
         tx_state_changes_callback: (state: TXState) => void,
@@ -152,8 +153,18 @@ abstract class BaseNetwork {
     ): Function
     abstract totalLongs(synthAddress: string): Amount | undefined
     abstract totalShorts(synthAddress: string) : Amount | undefined
-    abstract userLoans(): FrontendLoan[]
+    abstract userLoans(): FrontendLoan[] | undefined
     abstract withdrawLoanCallback(
+        borrowId: string,
+        amount: Amount,
+        tx_state_changes_callback: (state: TXState) => void,
+    ): Function
+    abstract depositLoanCallback(
+        borrowId: string,
+        amount: Amount,
+        tx_state_changes_callback: (state: TXState) => void,
+    ): Function
+    abstract repayLoanCallback(
         borrowId: string,
         amount: Amount,
         tx_state_changes_callback: (state: TXState) => void,

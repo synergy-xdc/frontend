@@ -1,6 +1,6 @@
 import { NetworkContext } from "@/networks/all";
 import Amount from "@/networks/base/amount";
-import { FrontendLoan } from "@/networks/base/network";
+import { FrontendLoan, FrontendSynth } from "@/networks/base/network";
 import { BigNumber, utils } from "ethers";
 import type { NextComponentType } from "next";
 import React from "react";
@@ -21,6 +21,8 @@ import {
     Table,
     useToaster,
 } from "rsuite";
+import FormControl from "rsuite/esm/FormControl";
+import FormGroup from "rsuite/esm/FormGroup";
 import InputAmount from "../InputAmount";
 import { getStateHandlingCallback } from "../WalletNotification";
 
@@ -51,7 +53,7 @@ const LoanSynth: NextComponentType = () => {
     const minLoanCRatio = networkProvider.minLoanColateralRatio()
     const availableSynths = networkProvider.getAvailableSynths();
 
-    const [synthAddressToBorrow, setSynthAddressToBorrow] = React.useState<string>(availableSynths[availableSynths.length - 1].address);
+    const [synthAddressToBorrow, setSynthAddressToBorrow] = React.useState<string>(availableSynths?.[availableSynths.length - 1]?.address ?? "0x0");
     const [amountToBorrow, setAmountToBorrow] = React.useState<Amount>(
         new Amount(BigNumber.from(0), 18)
     );
@@ -311,13 +313,24 @@ const TradeThePair: NextComponentType = () => {
 };
 
 
+
+
 const WithdrawBorrows: NextComponentType = () => {
     const networkProvider = React.useContext(NetworkContext);
     const toaster = useToaster();
 
-    const userLoans: FrontendLoan[] = networkProvider.userLoans();
+    const userLoans: FrontendLoan[] | undefined = networkProvider.userLoans();
     const [selectedLoanId, setSelectedLoanId] = React.useState(undefined);
     const [amountToWithdraw, setAmoutToWithdraw] = React.useState<Amount>(new Amount(BigNumber.from(0), 18))
+
+    const selectedBorrowDetail: FrontendLoan | undefined = userLoans?.find(elem => elem.borrowId === selectedLoanId);
+    const predictedCRation = networkProvider.predictBorrowCollateralRatio(
+        selectedLoanId,
+        selectedBorrowDetail?.synthAddress ?? "0x0",
+        new Amount(BigNumber.from(0), 18),
+        amountToWithdraw,
+        false
+    );
 
     const withdrawCallback = networkProvider.withdrawLoanCallback(
         selectedLoanId,
@@ -326,22 +339,23 @@ const WithdrawBorrows: NextComponentType = () => {
     );
 
     return (
-        <Panel style={{marginLeft: 20}} bordered shaded header="Withdraw borrows">
+        <Panel bordered shaded header="Withdraw collateral from a loan">
+            <p>Select your borrow</p>
             <SelectPicker
                 block
                 size="lg"
-                label="Borrows"
+                label="Borrow"
                 data={
                     (userLoans ?? []).filter(elem => elem.synthSymbol !== "rUSD").map((inst) => {
                         return {
-                            label: `${inst.borrowId.slice(0, 9)} (${inst.borrowedSynthAmount.toHumanString(5)} ${inst.synthSymbol}, ratio: ${inst.collateral}% over min ${inst.minCollateralRatio})`,
+                            label: `${inst.borrowId.slice(0, 9)} (${inst.collateral.toHumanString(2)} rUSD & ${inst.borrowedSynthAmount.toHumanString(5)} ${inst.synthSymbol}, ratio: ${inst.collateralRation}% over min ${inst.minCollateralRatio}%)`,
                             value: inst.borrowId
                         }
                     })
                 }
-                style={{ width: 300, minWidth: 250 }}
                 onChange={setSelectedLoanId}
                 cleanable={false}
+                style={{marginTop: 5}}
                 defaultValue={selectedLoanId}
             />
             <br />
@@ -350,15 +364,182 @@ const WithdrawBorrows: NextComponentType = () => {
                 value={amountToWithdraw}
                 setValue={setAmoutToWithdraw}
                 decimalsShift={1}
-            />
+            >
+                <Form.HelpText>New C-Ration: {predictedCRation}%</Form.HelpText>
+                <Form.HelpText>Min C-Ration: {selectedBorrowDetail?.minCollateralRatio}%</Form.HelpText>
+            </InputAmount>
             <br />
             <Button
                 block
-                style={{backgroundColor: "#b8469b"}}
+                disabled={selectedLoanId === undefined}
+                appearance="primary"
+                // color="violet"
+                style={{backgroundColor: selectedLoanId == undefined ? "#48738a" : "#2e6585"}}
                 onClick={async () => {withdrawCallback()}}
             >
                 Withdraw
             </Button>
+
+        </Panel>
+    );
+}
+
+const RepayBorrow: NextComponentType = () => {
+    const networkProvider = React.useContext(NetworkContext);
+    const toaster = useToaster();
+
+    const userLoans: FrontendLoan[] | undefined = networkProvider.userLoans();
+    const [selectedLoanId, setSelectedLoanId] = React.useState(undefined);
+    const [amountToRepay, setAmoutToRepay] = React.useState<Amount>(new Amount(BigNumber.from(0), 18))
+
+    const selectedBorrowDetail: FrontendLoan | undefined = userLoans?.find(elem => elem.borrowId === selectedLoanId);
+    const predictedCRation = networkProvider.predictBorrowCollateralRatio(
+        selectedLoanId,
+        selectedBorrowDetail?.synthAddress ?? "0x0",
+        amountToRepay,
+        new Amount(BigNumber.from(0), 18),
+        false
+    );
+
+    const repayCallback = networkProvider.repayLoanCallback(
+        selectedLoanId,
+        amountToRepay,
+        getStateHandlingCallback(toaster)
+    );
+
+    return (
+        <Panel bordered shaded header="Repay a borrow">
+            <p>Select your borrow</p>
+            <SelectPicker
+                block
+                size="lg"
+                label="Borrow"
+                data={
+                    (userLoans ?? []).filter(elem => elem.synthSymbol !== "rUSD").map((inst) => {
+                        return {
+                            label: `${inst.borrowId.slice(0, 9)} (${inst.collateral.toHumanString(2)} rUSD & ${inst.borrowedSynthAmount.toHumanString(5)} ${inst.synthSymbol}, ratio: ${inst.collateralRation}% over min ${inst.minCollateralRatio}%)`,
+                            value: inst.borrowId
+                        }
+                    })
+                }
+                onChange={setSelectedLoanId}
+                cleanable={false}
+                style={{marginTop: 5}}
+                defaultValue={selectedLoanId}
+            />
+            <br />
+            <InputAmount
+                title="Amount to repay (synth)"
+                value={amountToRepay}
+                setValue={setAmoutToRepay}
+                decimalsShift={1}
+            >
+                <Form.HelpText>New C-Ration: {predictedCRation}%</Form.HelpText>
+                <Form.HelpText>Min C-Ration: {selectedBorrowDetail?.minCollateralRatio}%</Form.HelpText>
+            </InputAmount>
+            <br />
+            <Button
+                block
+                disabled={selectedLoanId === undefined}
+                appearance="primary"
+                style={{backgroundColor: selectedLoanId == undefined ? "#8a7f48" : "#85782e"}}
+                onClick={async () => {repayCallback()}}
+            >
+                Repay
+            </Button>
+
+        </Panel>
+    );
+}
+
+
+const DepositBorrows: NextComponentType = () => {
+    const networkProvider = React.useContext(NetworkContext);
+    const toaster = useToaster();
+
+    const userLoans: FrontendLoan[] | undefined = networkProvider.userLoans();
+    const rusdLoanAllowance = networkProvider.getRusdLoanAllowance();
+    const [selectedLoanId, setSelectedLoanId] = React.useState(undefined);
+    const [amountToDeposit, setAmoutToDeposit] = React.useState<Amount>(new Amount(BigNumber.from(0), 18))
+
+    const selectedBorrowDetail: FrontendLoan | undefined = userLoans?.find(elem => elem.borrowId === selectedLoanId);
+    const predictedCRation = networkProvider.predictBorrowCollateralRatio(
+        selectedLoanId,
+        selectedBorrowDetail?.synthAddress ?? "0x0",
+        new Amount(BigNumber.from(0), 18),
+        amountToDeposit,
+        true
+    );
+
+    const approveCallback = networkProvider.setRusdLoanAllowanceCallback(
+        amountToDeposit,
+        getStateHandlingCallback(toaster)
+    );
+    const depositCallback = networkProvider.depositLoanCallback(
+        selectedLoanId,
+        amountToDeposit,
+        getStateHandlingCallback(toaster)
+    );
+
+    return (
+        <Panel bordered shaded header="Depostit collateral to a loan">
+            <p>Select your borrow</p>
+            <SelectPicker
+                block
+                size="lg"
+                label="Borrow"
+                data={
+                    (userLoans ?? []).filter(elem => elem.synthSymbol !== "rUSD").map((inst) => {
+                        return {
+                            label: `${inst.borrowId.slice(0, 9)} (${inst.collateral.toHumanString(2)} rUSD & ${inst.borrowedSynthAmount.toHumanString(5)} ${inst.synthSymbol}, ratio: ${inst.collateralRation}% over min ${inst.minCollateralRatio}%)`,
+                            value: inst.borrowId
+                        }
+                    })
+                }
+                onChange={setSelectedLoanId}
+                cleanable={false}
+                style={{marginTop: 5}}
+                defaultValue={selectedLoanId}
+            />
+            <br />
+            <InputAmount
+                title="Amount to deposit (rUSD)"
+                value={amountToDeposit}
+                setValue={setAmoutToDeposit}
+                decimalsShift={1}
+            >
+                <Form.HelpText>Allowance: {rusdLoanAllowance?.toHumanString(2)}</Form.HelpText>
+                <Form.HelpText>New C-Ration: {predictedCRation}%</Form.HelpText>
+                <Form.HelpText>Min C-Ration: {selectedBorrowDetail?.minCollateralRatio}%</Form.HelpText>
+            </InputAmount>
+            <br />
+            <ButtonGroup justified>
+                <Button
+                    appearance="primary"
+                    style={{backgroundColor: selectedLoanId == undefined ? "#8a5e48" : "#854c2e"}}
+                    onClick={async () => {approveCallback()}}
+                    disabled={
+                        parseFloat(rusdLoanAllowance?.toHumanString(18)) >=
+                        parseFloat(amountToDeposit?.toHumanString(18))
+                        || selectedLoanId === undefined
+                    }
+                >
+                    Approve
+                </Button>
+                <Button
+                    disabled={
+                        parseFloat(rusdLoanAllowance?.toHumanString(18)) <
+                        parseFloat(amountToDeposit?.toHumanString(18))
+                        || selectedLoanId === undefined
+                    }
+                    appearance="primary"
+                    style={{backgroundColor: selectedLoanId == undefined ? "#8a5e48" : "#854c2e"}}
+                    onClick={async () => {depositCallback()}}
+                >
+                    Deposit
+                </Button>
+            </ButtonGroup>
+
 
         </Panel>
     );
@@ -376,8 +557,8 @@ const SwapSynthes: NextComponentType = () => {
         new Amount(BigNumber.from(0), 18)
     );
     const [swapMethod, setSwapMethod] = React.useState<"swapFrom" | "swapTo">("swapFrom");
-    const [fromSynth, setFromSynth] = React.useState<string>(availableSynths[0].address);
-    const [toSynth, setToSynth] = React.useState<string>(availableSynths[availableSynths.length - 1].address);
+    const [fromSynth, setFromSynth] = React.useState<string>(availableSynths?.[0]?.address ?? "0x0");
+    const [toSynth, setToSynth] = React.useState<string>(availableSynths?.[availableSynths.length - 1]?.address ?? "0x0");
 
     const synthFromBalance = networkProvider.getSynthBalance(fromSynth);
     const synthToBalance = networkProvider.getSynthBalance(toSynth);
@@ -431,7 +612,7 @@ const SwapSynthes: NextComponentType = () => {
                                 setSynthFromAmount(new Amount(BigNumber.from(0), 18))
                                 setSynthToAmount(new Amount(BigNumber.from(0), 18))
                             }}
-                            defaultValue={availableSynths[0].address}
+                            defaultValue={availableSynths?.[0]?.address}
                         />
                     </InputGroup.Button>
                 </InputGroup>
@@ -462,7 +643,7 @@ const SwapSynthes: NextComponentType = () => {
                             size="sm"
                             label="Synth"
                             data={
-                                availableSynths.map((elem) => ({
+                                (availableSynths ?? []).map((elem) => ({
                                     label: elem.fullName,
                                     value: elem.address
                                 }))
@@ -473,7 +654,7 @@ const SwapSynthes: NextComponentType = () => {
                                 setSynthToAmount(new Amount(BigNumber.from(0), 18))
                                 setSynthFromAmount(new Amount(BigNumber.from(0), 18))
                             }}
-                            defaultValue={availableSynths[availableSynths.length - 1].address}
+                            defaultValue={availableSynths?.[availableSynths.length - 1]?.address}
                         />
                     </InputGroup.Button>
                 </InputGroup>
@@ -491,7 +672,7 @@ const SwapSynthes: NextComponentType = () => {
                 <b>Swap</b>
             </Button>
             <Form.HelpText>
-                Price: 2323.33 ({availableSynths.find(elem => elem.address === toSynth)?.fullName} in {availableSynths.find(elem => elem.address === fromSynth)?.fullName})
+                Price: 2323.33 ({availableSynths?.find(elem => elem.address === toSynth)?.fullName} in {availableSynths.find(elem => elem.address === fromSynth)?.fullName})
             </Form.HelpText>
         </Panel>
     );
@@ -561,7 +742,9 @@ const Skew: NextComponentType = ({synthAddress, ...props}: {synthAddress: string
     const totalShorts = networkProvider.totalShorts(synthAddress);
     const totalLongs = networkProvider.totalLongs(synthAddress);
 
-    const skew = (1 - parseFloat(totalShorts?.toHumanString(18)) / parseFloat(totalLongs?.toHumanString(18)))
+    const skew = parseFloat(totalShorts?.toHumanString(18))
+        / (parseFloat(totalLongs?.toHumanString(18)) + parseFloat(totalShorts?.toHumanString(18)))
+    ;
 
     return (
         <FlexboxGrid
@@ -573,7 +756,7 @@ const Skew: NextComponentType = ({synthAddress, ...props}: {synthAddress: string
             </FlexboxGrid.Item>
             <FlexboxGrid.Item colspan={21}>
                 <Progress.Line
-                    percent={Math.round(skew * 100)}
+                    percent={Math.round((1 - skew) * 100)}
                     strokeColor="#1d5f5e"
                     trailColor="#82363a"
                 />
@@ -584,8 +767,8 @@ const Skew: NextComponentType = ({synthAddress, ...props}: {synthAddress: string
 
 const TradingView: NextComponentType = () => {
     const networkProvider = React.useContext(NetworkContext);
-    const availableSynths = networkProvider.getAvailableSynths();
-    const [tradingSynthAddress, setTradingSynthAddress] = React.useState<string>(availableSynths[availableSynths.length - 1]?.address);
+    const availableSynths: FrontendSynth[] | undefined = networkProvider.getAvailableSynths();
+    const [tradingSynthAddress, setTradingSynthAddress] = React.useState<string>(availableSynths?.[availableSynths.length - 1]?.address ?? "0x0");
 
     return (
         <>
@@ -642,7 +825,23 @@ const TradingView: NextComponentType = () => {
                     <LoanSynth />
                 </FlexboxGrid.Item>
             </FlexboxGrid>
-            <WithdrawBorrows />
+            <div style={{marginTop: 10, marginBottom: 30}}>
+                <FlexboxGrid justify="space-around">
+                    <FlexboxGrid.Item colspan={11}>
+                        <RepayBorrow />
+
+                    </FlexboxGrid.Item>
+                    <FlexboxGrid.Item colspan={11}>
+                        <WithdrawBorrows />
+                    </FlexboxGrid.Item>
+                </FlexboxGrid>
+                <br />
+
+            </div>
+            <div style={{marginLeft: 40, marginRight: 40}}>
+                <DepositBorrows />
+            </div>
+
             <br />
         </>
     );

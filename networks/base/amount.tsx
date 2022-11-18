@@ -11,7 +11,7 @@ export default class Amount {
     }
 
     toHumanString(roundTo: number): string {
-        let numberStringified = utils.formatUnits(this.amount.toString(), this.decimals);
+        let numberStringified = utils.formatUnits(this.amount?.toString() ?? "0", this.decimals);
         const dotIndex = numberStringified.indexOf(".");
         numberStringified = numberStringified.slice(0, dotIndex) + "." + numberStringified.slice(dotIndex + 1, dotIndex + 1 + roundTo)
         if (numberStringified.endsWith(".0")) {

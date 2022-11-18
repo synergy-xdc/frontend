@@ -581,7 +581,7 @@ class EthereumNetwork extends BaseNetwork {
                 availableAt: new Date(insurance.startTime.add(insurance.lockTime) * 1000).toString(),
                 rawRepaid: new Amount(insurance.repaidRaw, 18).toHumanString(18),
                 availableCompensation: compensation,
-                availableCompensationString:  compensation.toHumanString(3),
+                availableCompensationString: compensation.toHumanString(3),
                 unstakeButton: (
                     <Button
                         style={{ borderWidth: 2 }}
@@ -619,10 +619,10 @@ class EthereumNetwork extends BaseNetwork {
             userShares.data !== undefined && userDebt.data !== undefined
             && userShares.data !== null && userDebt.data !== null
         ) {
-            const repay: BigNumber =
-                userDebt.data.minted > userShares.data ?
-                BigNumber.from(0)
-                : userShares.data.sub(userDebt.data.minted)
+            let repay: BigNumber = userShares.data.sub(userDebt.data.minted);
+            if (repay.lt(BigNumber.from(0))) {
+                repay = BigNumber.from(0)
+            }
             return new Amount(repay, 18)
         }
         return undefined;

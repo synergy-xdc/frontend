@@ -330,16 +330,16 @@ class EthereumNetwork extends BaseNetwork {
                 tradingViewSymbol: tradingViewSymbols["rGLD"],
             },
             {
-                address: "0x3a98193436a7B488b6C5ACA7caEa032350b21d5d",
-                fullName: "rGAS",
-                symbol: "rGAS",
-                tradingViewSymbol: tradingViewSymbols["rGLD"],
-            },
-                        {
                 address: "0xae29c62Af11ce718d7bE506e2d04806164263a29",
                 fullName: "rHPI",
                 symbol: "rHPI",
                 tradingViewSymbol: "-",
+            },
+            {
+                address: "0x3a98193436a7B488b6C5ACA7caEa032350b21d5d",
+                fullName: "rGAS",
+                symbol: "rGAS",
+                tradingViewSymbol: tradingViewSymbols["rGAS"],
             }
         ]
     }

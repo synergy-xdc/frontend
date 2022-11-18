@@ -10,6 +10,7 @@ import FormHelpText from "rsuite/esm/FormHelpText";
 import { NetworkContext } from "@/networks/all";
 import FlexboxGridItem from "rsuite/esm/FlexboxGrid/FlexboxGridItem";
 import { getStateHandlingCallback } from "../WalletNotification";
+import Script from "next/script";
 
 
 const MintWethView: NextComponentType = () => {
@@ -89,14 +90,16 @@ const MintRawView: NextComponentType = () => {
 
 const FaucetView: NextComponentType = () => {
     return (
-        <FlexboxGrid justify="space-around">
+        <>
+            <FlexboxGrid justify="space-around">
             <FlexboxGrid.Item colspan={11}>
                 <MintWethView />
             </FlexboxGrid.Item>
             <FlexboxGrid.Item colspan={11}>
                 <MintRawView />
             </FlexboxGrid.Item>
-        </FlexboxGrid>
+            </FlexboxGrid>
+        </>
     );
 }
 

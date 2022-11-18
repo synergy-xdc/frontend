@@ -136,8 +136,8 @@ abstract class BaseNetwork {
         amount: Amount,
         tx_state_changes_callback: (state: TXState) => void,
     ): Function
-
-
+    abstract totalLongs(synthAddress: string): Amount | undefined
+    abstract totalShorts(synthAddress: string) : Amount | undefined
 }
 
 

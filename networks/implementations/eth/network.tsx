@@ -1109,6 +1109,47 @@ class EthereumNetwork extends BaseNetwork {
         return undefined
     }
 
+    totalLongs(synthAddress: string): Amount | undefined {
+        const loanAddress = wagmi.useContractRead({
+            address: SynergyAddress,
+            abi: SynergyABI,
+            functionName: "loan",
+        })
+        const totalLongs = wagmi.useContractRead({
+            address: loanAddress.data,
+            abi: LoanABI,
+            functionName: "totalLongs",
+            args: [synthAddress],
+            watch: true
+        })
+        if (totalLongs.data !== undefined && totalLongs.data !== null) {
+            const amount = new Amount(totalLongs.data, 18);
+            return amount;
+        }
+        return undefined;
+    }
+
+    totalShorts(synthAddress: string): Amount | undefined {
+        const loanAddress = wagmi.useContractRead({
+            address: SynergyAddress,
+            abi: SynergyABI,
+            functionName: "loan",
+        })
+        const totalShorts = wagmi.useContractRead({
+            address: loanAddress.data,
+            abi: LoanABI,
+            functionName: "totalShorts",
+            args: [synthAddress],
+            watch: true
+        })
+        if (totalShorts.data !== undefined && totalShorts.data !== null) {
+            const amount = new Amount(totalShorts.data, 18);
+            return amount;
+        }
+        return undefined;
+    }
+
+
     _defineStateChangesCallback(
         isWaiting: boolean,
         isLoading: boolean,

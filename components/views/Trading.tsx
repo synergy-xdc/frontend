@@ -499,6 +499,33 @@ const ActiveOrdersTable: NextComponentType = () => {
     );
 };
 
+
+const Skew: NextComponentType = ({synthAddress, ...props}: {synthAddress: string}) => {
+    const networkProvider = React.useContext(NetworkContext);
+    const totalShorts = networkProvider.totalShorts(synthAddress);
+    const totalLongs = networkProvider.totalLongs(synthAddress);
+
+    const skew = (1 - parseFloat(totalShorts?.toHumanString(18)) / parseFloat(totalLongs?.toHumanString(18)))
+
+    return (
+        <FlexboxGrid
+            style={{ paddingTop: 5, paddingLeft: 25 }}
+            justify="space-between"
+        >
+            <FlexboxGrid.Item style={{ paddingTop: 4 }} colspan={1}>
+                <h5>Skew:</h5>
+            </FlexboxGrid.Item>
+            <FlexboxGrid.Item colspan={21}>
+                <Progress.Line
+                    percent={Math.round(skew * 100)}
+                    strokeColor="#1d5f5e"
+                    trailColor="#82363a"
+                />
+            </FlexboxGrid.Item>
+        </FlexboxGrid>
+    );
+}
+
 const TradingView: NextComponentType = () => {
     const networkProvider = React.useContext(NetworkContext);
     const availableSynths = networkProvider.getAvailableSynths();
@@ -533,21 +560,7 @@ const TradingView: NextComponentType = () => {
                                     />
                                 </FlexboxGrid.Item>
                                 <FlexboxGrid.Item colspan={16}>
-                                    <FlexboxGrid
-                                        style={{ paddingTop: 5, paddingLeft: 25 }}
-                                        justify="space-between"
-                                    >
-                                        <FlexboxGrid.Item style={{ paddingTop: 4 }} colspan={1}>
-                                            <h5>Skew:</h5>
-                                        </FlexboxGrid.Item>
-                                        <FlexboxGrid.Item colspan={21}>
-                                            <Progress.Line
-                                                percent={30}
-                                                strokeColor="#1d5f5e"
-                                                trailColor="#82363a"
-                                            />
-                                        </FlexboxGrid.Item>
-                                    </FlexboxGrid>
+                                <Skew synthAddress={tradingSynthAddress}/>
                                 </FlexboxGrid.Item>
                             </FlexboxGrid>
                         </FlexboxGrid.Item>
@@ -566,7 +579,6 @@ const TradingView: NextComponentType = () => {
                         </FlexboxGrid.Item>
                     </FlexboxGrid>
                 </FlexboxGrid.Item>
-
                 <FlexboxGrid.Item colspan={6}>
                     {/* <TradeThePair /> */}
                     <SwapSynthes />

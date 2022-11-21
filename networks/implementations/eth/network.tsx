@@ -589,7 +589,7 @@ class EthereumNetwork extends BaseNetwork {
                 }
             }),
         })
-        const userInsurances: FrontendUserInsurance[] | undefined = insurancesDetail.data?.map((insurance: ContractUserInsurance) => {
+        const userInsurances: FrontendUserInsurance[] = insurancesDetail.data?.filter(elem => elem).map((insurance: ContractUserInsurance) => {
             const compensation = new Amount(
                 insurancesCompensation.data?.[insurancesDetail.data?.indexOf(insurance) as number],
                 18
@@ -615,8 +615,8 @@ class EthereumNetwork extends BaseNetwork {
                     </Button>
                 )
             }
-        })
-        return userInsurances ? userInsurances : [];
+        }) ?? []
+        return userInsurances;
     }
 
 

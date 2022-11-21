@@ -5,7 +5,7 @@ import YoutubeEmbed from "../Youtube";
 
 const HomeView: NextComponentType = () => {
     return (
-        <YoutubeEmbed embedId="r2hlTCYfyY8" />
+        <YoutubeEmbed embedId="TZZEZcyzYpk" />
     );
 }
 

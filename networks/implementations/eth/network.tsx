@@ -26,24 +26,45 @@ import BaseNetwork, { ContractLoan, ContractUserInsurance, FrontendLoan, Fronten
 import TXState, { ContractWriteAccess } from "@/networks/base/txstate";
 import { sign } from "crypto";
 import { Button, toaster, useToaster } from "rsuite";
+import { publicProvider } from 'wagmi/providers/public';
+import { InjectedConnector } from 'wagmi/connectors/injected'
 import { NotificationTXRevertError } from "@/components/WalletNotification";
 
-const chains = [wagmi.chain.goerli];
-const { provider, webSocketProvider } = wagmi.configureChains(chains, [
-  walletConnectProvider({ projectId: "12647116f49027a9b16f4c0598eb6d74" }),
+wagmi.chain.arbitrum
+
+const defaultChains: wagmi.Chain[] = [
+    {
+        id: 1313161555,
+        name: "Aurora Testnet",
+        network: "Aurora Testnet",
+        nativeCurrency: {
+            name: "Ether",
+            symbol: "ETH",
+            decimals: 18
+        },
+        rpcUrls: {
+            default: "https://testnet.aurora.dev",
+            public: "https://testnet.aurora.dev",
+        },
+        testnet: true
+    }
+];
+const { provider, webSocketProvider, chains } = wagmi.configureChains(defaultChains, [
+    // walletConnectProvider({ projectId: "12647116f49027a9b16f4c0598eb6d74" }),
+    publicProvider()
 ]);
-export const wagmiClient = wagmi.createClient({
-  autoConnect: true,
-  connectors: modalConnectors({ appName: "Synergy", chains }),
-  provider,
-  webSocketProvider
+const wagmiClient = wagmi.createClient({
+    autoConnect: true,
+    connectors: [new InjectedConnector({ chains })],
+    provider,
+    webSocketProvider
 });
 
 type DynAddress = `0x${string}` | undefined;
 
 
-const SynergyAddress: string = "0x2ECa37c63F732d05E9F4Ae31e6A7229598EaEe26";
-const InsuranceAddress: string = "0x402F27C92e88109Ec4E3A5380FD45a825DD9cde8";
+const SynergyAddress: string = "0x3020F71F49bB99920368A3f068f437880391F094";
+const InsuranceAddress: string = "0x1FA0c70dD4A072eF4F21dFbD98c708889eFF5f59";
 
 
 const tradingViewSymbols = {
@@ -75,16 +96,15 @@ class EthereumNetwork extends BaseNetwork {
 
     connectButton(): ReactNode {
         const ethereumClient = React.useContext(EthereumClientContext);
+        const { connect, connectors } = wagmi.useConnect();
         return (
             <div>
-                <Web3Modal
-                    projectId="12647116f49027a9b16f4c0598eb6d74"
-                    theme="dark"
-                    accentColor="magenta"
-                    ethereumClient={ethereumClient}
-                />
                 <div id="ethereum-connect-button" style={{ color: "white" }}>
-                    <Web3Button />
+                    <Button
+                        appearance="primary"
+                        color="cyan"
+                        onClick={() => connect({ connector: connectors[0] })}
+                    ><b>Connect Injected</b></Button>
                 </div>
             </div>
         );
@@ -340,25 +360,25 @@ class EthereumNetwork extends BaseNetwork {
         // console.log("SYNTHS", synths)
         return [
             {
-                address: "0x0e8063A6206D846f941BC74869f085267c8AD469",
+                address: "0xeb8514f2f953E7c266C4dc08477f28089c793dd1",
                 fullName: "rUSD",
                 symbol: "rUSD",
                 tradingViewSymbol: "-"
             },
             {
-                address: "0x203583737BEFABf17587c363F7ea27f3E3379e2B",
+                address: "0x976F6A26e5A05bf07296615F3520D9E71B254875",
                 fullName: "rGLD",
                 symbol: "rGLD",
                 tradingViewSymbol: tradingViewSymbols["rGLD"],
             },
+            // {
+            //     address: "0xae29c62Af11ce718d7bE506e2d04806164263a29",
+            //     fullName: "rHPI",
+            //     symbol: "rHPI",
+            //     tradingViewSymbol: "-",
+            // },
             {
-                address: "0xae29c62Af11ce718d7bE506e2d04806164263a29",
-                fullName: "rHPI",
-                symbol: "rHPI",
-                tradingViewSymbol: "-",
-            },
-            {
-                address: "0x3a98193436a7B488b6C5ACA7caEa032350b21d5d",
+                address: "0xF0A27891d8befd1299Ea068CfF9fD10e909e4c13",
                 fullName: "rGAS",
                 symbol: "rGAS",
                 tradingViewSymbol: tradingViewSymbols["rGAS"],
@@ -731,13 +751,6 @@ class EthereumNetwork extends BaseNetwork {
                 increase
             ]
         })
-        console.log("PRED", prediction.data, [
-            borrowId ?? ethers.constants.HashZero,
-            synthAddress,
-            amountToBorrow.amount,
-            amountToPledge.amount,
-            increase
-        ])
         if (prediction.data !== undefined && prediction.data !== null) {
             const newCratio = new Amount(prediction.data, 6);
             return parseFloat(newCratio.toHumanString(2))
@@ -1206,6 +1219,7 @@ class EthereumNetwork extends BaseNetwork {
     }
 
     userLoans(): FrontendLoan[] | undefined {
+        const [frontendLoans, setFrontendLoans] = React.useState<undefined | FrontendLoan[]>([]);
         const account = wagmi.useAccount();
         const loanAddress = wagmi.useContractRead({
             address: SynergyAddress,
@@ -1228,7 +1242,10 @@ class EthereumNetwork extends BaseNetwork {
                 { start: 0, perPage: 20, direction: 'increment' },
             ),
         })
-        userLoansHashes.refetch()
+        if (!frontendLoans) {
+            userLoansHashes.refetch()
+        }
+
         const loansDetail = wagmi.useContractReads({
             contracts: userLoansHashes.data?.pages[0].filter(hash => hash).map((hash) => {
                 return {
@@ -1239,7 +1256,9 @@ class EthereumNetwork extends BaseNetwork {
                 }
             }),
         })
-        loansDetail.refetch()
+        if (!frontendLoans) {
+            loansDetail.refetch()
+        }
         const loansCollateralRatio = wagmi.useContractReads({
             contracts: userLoansHashes.data?.pages[0].filter(hash => hash).map((hash) => {
                 return {
@@ -1250,7 +1269,9 @@ class EthereumNetwork extends BaseNetwork {
                 }
             }),
         })
-        loansCollateralRatio.refetch()
+        if (!frontendLoans) {
+            loansCollateralRatio.refetch()
+        }
         const loansSynthSymbol = wagmi.useContractReads({
             contracts: loansDetail?.data?.filter(loan => loan).map((loan: ContractLoan) => {
                 return {
@@ -1260,8 +1281,9 @@ class EthereumNetwork extends BaseNetwork {
                 }
             }) ?? [],
         })
-        loansSynthSymbol.refetch();
-        const [frontendLoans, setFrontendLoans] = React.useState<undefined | FrontendLoan[]>([]);
+        if (!frontendLoans) {
+            loansSynthSymbol.refetch()
+        }
         useEffect(() => {
             setFrontendLoans(
                 userLoansHashes.data?.pages[0].filter(hash => hash).map((hash) => {

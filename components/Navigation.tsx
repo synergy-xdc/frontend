@@ -37,26 +37,27 @@ const ConnectedWallet: NextComponentType = () => {
     const showWallet = () => {
         const wallet = AVAILABLE_NETWORKS[network].showWallet();
 
+        const connectButtonHook = AVAILABLE_NETWORKS[network].connectButton();
+        const connectedViewHook = (
+            <Button
+                color="green"
+                appearance="ghost"
+                style={{ borderColor: "#6474a7", color: "rgba(255, 255, 255, 0.9" }}
+            >
+                {wallet?.network_currency_symbol}
+                &nbsp;{wallet?.network_currency_amount}
+                &nbsp;({wallet?.address.slice(0, 5)}..
+                {wallet?.address.slice(
+                    wallet?.address.length - 5,
+                    wallet?.address.length
+                )}
+                )
+            </Button>
+        );
+
         return (
             <div>
-                {wallet ? (
-                    <Button
-                        color="green"
-                        appearance="ghost"
-                        style={{ borderColor: "#6474a7", color: "rgba(255, 255, 255, 0.9" }}
-                    >
-                        {wallet.network_currency_symbol}
-                        &nbsp;{wallet.network_currency_amount}
-                        &nbsp;({wallet.address.slice(0, 5)}..
-                        {wallet.address.slice(
-                            wallet.address.length - 5,
-                            wallet.address.length
-                        )}
-                        )
-                    </Button>
-                ) : (
-                    AVAILABLE_NETWORKS[network].connectButton()
-                )}
+                {wallet ? connectedViewHook : connectButtonHook}
             </div>
         );
     };
@@ -82,7 +83,7 @@ const ConnectedWallet: NextComponentType = () => {
 };
 const Networks = [
     {
-        label: <span>Ethereum (Goerli)</span>,
+        label: <span>Aurora (testnet)</span>,
         value: "ethereum",
     },
 ];

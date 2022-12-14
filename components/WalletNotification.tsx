@@ -41,7 +41,7 @@ export const NotificationTXRevertError = ({message, ...props}: {
         <WalletNotification
             type="error"
             header="Contract will revert!"
-            content={message.charAt(0).toUpperCase() + message.slice(1)}
+            content={message?.charAt(0).toUpperCase() + message?.slice(1)}
         />
     );
 }

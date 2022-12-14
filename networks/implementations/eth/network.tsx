@@ -34,17 +34,17 @@ wagmi.chain.arbitrum
 
 const defaultChains: wagmi.Chain[] = [
     {
-        id: 1313161555,
-        name: "Aurora Testnet",
-        network: "Aurora Testnet",
+        id: 51,
+        name: "XDC Apothem Network",
+        network: "XDC Apothem Network",
         nativeCurrency: {
-            name: "Ether",
-            symbol: "ETH",
+            name: "TXDC",
+            symbol: "TXDC",
             decimals: 18
         },
         rpcUrls: {
-            default: "https://testnet.aurora.dev",
-            public: "https://testnet.aurora.dev",
+            default: "https://erpc.apothem.network",
+            public: "https://erpc.apothem.network",
         },
         testnet: true
     }
@@ -63,8 +63,8 @@ const wagmiClient = wagmi.createClient({
 type DynAddress = `0x${string}` | undefined;
 
 
-const SynergyAddress: string = "0x3020F71F49bB99920368A3f068f437880391F094";
-const InsuranceAddress: string = "0x1FA0c70dD4A072eF4F21dFbD98c708889eFF5f59";
+const SynergyAddress: string = "0x18Cd2C6dD35EED4c06226618A2717F61A7FDAa0e";
+const InsuranceAddress: string = "0x3020F71F49bB99920368A3f068f437880391F094";
 
 
 const tradingViewSymbols = {
@@ -114,6 +114,7 @@ class EthereumNetwork extends BaseNetwork {
         const balance = wagmi.useBalance({
             address: account.address,
         });
+        console.log("WAL", balance.error)
         if (account.isConnected == false) {
             return undefined;
         }
@@ -123,7 +124,7 @@ class EthereumNetwork extends BaseNetwork {
 
         const wallet: WalletPrimaryData = {
             address: account.address as string,
-            network_currency_symbol: "ETH",
+            network_currency_symbol: "TXDC",
             network_currency_amount: new Amount(balance.data.value, 18).toHumanString(6),
         };
         return wallet;
@@ -144,6 +145,7 @@ class EthereumNetwork extends BaseNetwork {
             abi: RusdABI,
             functionName: "balanceOf",
             args: [account.address],
+
             watch: true
         });
         if (
@@ -247,12 +249,13 @@ class EthereumNetwork extends BaseNetwork {
             address: wethAddress.data,
         });
         const wethBalanceOfCall = wagmi.useContractRead({
-            address: wethAddress.data as string,
-            abi: RawABI,
+            address: wethAddress.data,
+            abi: WethABI,
             functionName: "balanceOf",
             args: [account.address],
             watch: true
         });
+        console.log("WETHB", wethBalanceOfCall.error)
         if (
             wethBalanceOfCall.data !== undefined &&
             wethContract.data?.decimals !== undefined
@@ -360,13 +363,13 @@ class EthereumNetwork extends BaseNetwork {
         // console.log("SYNTHS", synths)
         return [
             {
-                address: "0xeb8514f2f953E7c266C4dc08477f28089c793dd1",
+                address: "0x64C2A9Ad9bD14f68db85578F1E4eC50388C36cCA",
                 fullName: "rUSD",
                 symbol: "rUSD",
                 tradingViewSymbol: "-"
             },
             {
-                address: "0x976F6A26e5A05bf07296615F3520D9E71B254875",
+                address: "0x6B4d8e804E971336fBFEF1cd184B156B9B340676",
                 fullName: "rGLD",
                 symbol: "rGLD",
                 tradingViewSymbol: tradingViewSymbols["rGLD"],
@@ -378,7 +381,7 @@ class EthereumNetwork extends BaseNetwork {
             //     tradingViewSymbol: "-",
             // },
             {
-                address: "0xF0A27891d8befd1299Ea068CfF9fD10e909e4c13",
+                address: "0x6597aE8Ba8C12977265Bd280F4645f935f7B8F2F",
                 fullName: "rGAS",
                 symbol: "rGAS",
                 tradingViewSymbol: tradingViewSymbols["rGAS"],

@@ -83,7 +83,7 @@ const ConnectedWallet: NextComponentType = () => {
 };
 const Networks = [
     {
-        label: <span>Aurora (testnet)</span>,
+        label: <span>XDC Apothem</span>,
         value: "ethereum",
     },
 ];

@@ -314,7 +314,7 @@ const Mint: NextComponentType = () => {
             header="Mint rUSD"
         >
             <p>
-            Deposit WETH as a collateral and get rUSD in return. Resulting collateral ratio should be greater than min collateral ratio
+            Deposit WXDC as a collateral and get rUSD in return. Resulting collateral ratio should be greater than min collateral ratio
             </p>
             <hr />
             <Form.Group controlId="_">
@@ -364,7 +364,7 @@ const Mint: NextComponentType = () => {
             </Form.Group>
             <br />
             <Form.Group controlId="_">
-                <Form.ControlLabel>WETH amount</Form.ControlLabel>
+                <Form.ControlLabel>WXDC amount</Form.ControlLabel>
                 <InputGroup style={{ marginTop: 5, marginBottom: 5 }}>
                     <InputGroup.Button
                         onClick={() =>
@@ -505,7 +505,7 @@ const Burn: NextComponentType = () => {
     return (
         <Panel bordered shaded header="Burn rUSD">
             <p>
-            Burn rUSD to increase your collateral ratio and get ability to withdraw collateral in WETH. You can choose insurance to repay your debt pool losses in RAW.
+            Burn rUSD to increase your collateral ratio and get ability to withdraw collateral in WXDC. You can choose insurance to repay your debt pool losses in RAW.
             </p>
             <hr />
             <Form.Group controlId="_">
@@ -598,11 +598,11 @@ const Burn: NextComponentType = () => {
             </Button>
             <hr />
             <p>
-            Withdraw WETH collateral (this decreases collateral ratio).
+            Withdraw WXDC collateral (this decreases collateral ratio).
             </p>
             <br />
             <Form.Group controlId="_">
-                <Form.ControlLabel>Unlock WETH</Form.ControlLabel>
+                <Form.ControlLabel>Unlock WXDC</Form.ControlLabel>
                 <InputGroup style={{ marginTop: 5, marginBottom: 5 }}>
                     <InputGroup.Button
                         onClick={() =>
@@ -648,7 +648,7 @@ const Burn: NextComponentType = () => {
                     </InputGroup.Button>
                 </InputGroup>
                 <Form.HelpText>
-                    Locked WETH Amount: {wethLocked?.toHumanString(5)}
+                    Locked WXDC Amount: {wethLocked?.toHumanString(5)}
                 </Form.HelpText>
                 <Form.HelpText>
                     Current balance: {wrappedGasTokenBalance?.toHumanString(5)}
@@ -673,7 +673,7 @@ const Burn: NextComponentType = () => {
                 }}
                 onClick={async () => withdrawCallback()}
             >
-                <b>Withdraw WETH</b>
+                <b>Withdraw WXDC</b>
             </Button>
         </Panel>
     );

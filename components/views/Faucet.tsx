@@ -27,9 +27,9 @@ const MintWethView: NextComponentType = () => {
     );
 
     return (
-        <Panel bordered shaded header="WETH faucet">
+        <Panel bordered shaded header="WXDC faucet">
             <InputAmount
-                title="WETH amount"
+                title="WXDC amount"
                 value={wethToMintAmount}
                 setValue={setWethToMintAmount}
                 decimalsShift={2}

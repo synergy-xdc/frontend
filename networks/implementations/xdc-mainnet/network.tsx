@@ -34,19 +34,19 @@ wagmi.chain.arbitrum
 
 const defaultChains: wagmi.Chain[] = [
     {
-        id: 51,
-        name: "XDC Apothem Network",
-        network: "XDC Apothem Network",
+        id: 50,
+        name: "XDC Network",
+        network: "XDC Network",
         nativeCurrency: {
-            name: "TXDC",
-            symbol: "TXDC",
+            name: "XDC",
+            symbol: "XDC",
             decimals: 18
         },
         rpcUrls: {
-            default: "https://erpc.apothem.network",
-            public: "https://erpc.apothem.network",
+            default: "https://rpc1.xinfin.network",
+            public: "https://rpc1.xinfin.network",
         },
-        testnet: true
+        testnet: false
     }
 ];
 const { provider, webSocketProvider, chains } = wagmi.configureChains(defaultChains, [
@@ -63,8 +63,8 @@ const wagmiClient = wagmi.createClient({
 type DynAddress = `0x${string}` | undefined;
 
 
-const SynergyAddress: string = "0x18Cd2C6dD35EED4c06226618A2717F61A7FDAa0e";
-const InsuranceAddress: string = "0x3020F71F49bB99920368A3f068f437880391F094";
+const SynergyAddress: string = "0xE0fd1bb6d8FB34daeFF08021Fa0752Ff061D4b4F";
+const InsuranceAddress: string = "0xcB8ADE5a0122D2Ee4fD91b0d533d4d7c63044ce7";
 
 
 const tradingViewSymbols = {
@@ -76,7 +76,7 @@ const tradingViewSymbols = {
 export const EthereumClientContext = React.createContext<EthereumClient | undefined>(undefined);
 
 
-class EthereumNetwork extends BaseNetwork {
+class XDCMainnetNetwork extends BaseNetwork {
     wethApproveState: TXState = TXState.Done;
     rawApproveState: TXState = TXState.Done;
     unlockWethState: TXState = TXState.Done;
@@ -124,7 +124,7 @@ class EthereumNetwork extends BaseNetwork {
 
         const wallet: WalletPrimaryData = {
             address: account.address as string,
-            network_currency_symbol: "TXDC",
+            network_currency_symbol: "XDC",
             network_currency_amount: new Amount(balance.data.value, 18).toHumanString(6),
         };
         return wallet;
@@ -363,13 +363,13 @@ class EthereumNetwork extends BaseNetwork {
         // console.log("SYNTHS", synths)
         return [
             {
-                address: "0x64C2A9Ad9bD14f68db85578F1E4eC50388C36cCA",
+                address: "0x4d19BC4b07F97926544CEAC7CaAA6023F942A720",
                 fullName: "rUSD",
                 symbol: "rUSD",
                 tradingViewSymbol: "-"
             },
             {
-                address: "0x6B4d8e804E971336fBFEF1cd184B156B9B340676",
+                address: "0x1FA0c70dD4A072eF4F21dFbD98c708889eFF5f59",
                 fullName: "rGLD",
                 symbol: "rGLD",
                 tradingViewSymbol: tradingViewSymbols["rGLD"],
@@ -381,12 +381,12 @@ class EthereumNetwork extends BaseNetwork {
             //     tradingViewSymbol: "-",
             // },
             {
-                address: "0x6597aE8Ba8C12977265Bd280F4645f935f7B8F2F",
+                address: "0x18Cd2C6dD35EED4c06226618A2717F61A7FDAa0e",
                 fullName: "rGAS",
                 symbol: "rGAS",
                 tradingViewSymbol: tradingViewSymbols["rGAS"],
             }
-        ]
+        ];
     }
 
     getCurrentCRatio(): number | undefined {
@@ -1435,4 +1435,4 @@ class EthereumNetwork extends BaseNetwork {
     }
 }
 
-export default EthereumNetwork;
+export default XDCMainnetNetwork;

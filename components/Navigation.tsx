@@ -12,7 +12,9 @@ import {
 import React, {
     FC,
     ReactNode,
+    useEffect,
 } from "react";
+import * as wagmi from "wagmi";
 import AVAILABLE_NETWORKS, { NetworkContext } from "@/networks/all";
 import Link from "next/link";
 
@@ -31,27 +33,39 @@ const NavItemStyle = {
     color: "#FFF",
 };
 
-const ConnectedWallet: NextComponentType = () => {
-    const [network, setNetwork] = React.useState<string>("ethereum");
+const ConnectedWallet: FC<{
+    changeNetworkCallback: (_: any) => void
+}> = ({ changeNetworkCallback, ...props}) => {
+    const chainsSwitcher = wagmi.useSwitchNetwork();
+    const currentChain = wagmi.useNetwork();
+    const [network, setNetwork] = React.useState<string>(
+        currentChain.chain?.id == 50 ? "mainnet" : "testnet"
+    );
+
+
 
     const showWallet = () => {
         const wallet = AVAILABLE_NETWORKS[network].showWallet();
 
         const connectButtonHook = AVAILABLE_NETWORKS[network].connectButton();
+        const [walletInfoText, setWalletInfoText] = React.useState<string>("");
+        useEffect(() => {
+            setWalletInfoText(
+                `${wallet?.network_currency_symbol} ${wallet?.network_currency_amount}
+                 (${wallet?.address.slice(0, 5)}..${wallet?.address.slice(
+                    wallet?.address.length - 5,
+                    wallet?.address.length
+                )})
+            `
+            )
+        }, [wallet])
         const connectedViewHook = (
             <Button
                 color="green"
                 appearance="ghost"
                 style={{ borderColor: "#6474a7", color: "rgba(255, 255, 255, 0.9" }}
             >
-                {wallet?.network_currency_symbol}
-                &nbsp;{wallet?.network_currency_amount}
-                &nbsp;({wallet?.address.slice(0, 5)}..
-                {wallet?.address.slice(
-                    wallet?.address.length - 5,
-                    wallet?.address.length
-                )}
-                )
+                {walletInfoText}
             </Button>
         );
 
@@ -61,30 +75,38 @@ const ConnectedWallet: NextComponentType = () => {
             </div>
         );
     };
+    console.log("NET", network, currentChain.chain, AVAILABLE_NETWORKS[network]);
 
     return (
         <>
-            <NetworkContext.Provider value={AVAILABLE_NETWORKS[network]}>
-                <SelectPicker
-                    size="lg"
-                    label="Network"
-                    data={Networks}
-                    style={{ width: 300, minWidth: 250 }}
-                    onChange={setNetwork}
-                    cleanable={false}
-                    defaultValue={network}
-                    searchable={false}
-                />
-                &nbsp;
-                {showWallet()}
-            </NetworkContext.Provider>
+            <SelectPicker
+                size="lg"
+                label="Network"
+                data={Networks}
+                style={{ width: 300, minWidth: 250 }}
+                onChange={(val) => {
+                    chainsSwitcher.switchNetwork?.(val == "testnet" ? 51 : 50);
+                    changeNetworkCallback(AVAILABLE_NETWORKS[val]);
+                    console.log("NETC", AVAILABLE_NETWORKS[val])
+                    setNetwork(val);
+                }}
+                cleanable={false}
+                defaultValue={network}
+                searchable={false}
+            />
+            &nbsp;
+            {showWallet()}
         </>
     );
 };
 const Networks = [
     {
         label: <span>XDC Apothem</span>,
-        value: "ethereum",
+        value: "testnet",
+    },
+    {
+        label: <span>XDC Mainnet</span>,
+        value: "mainnet",
     },
 ];
 
@@ -92,8 +114,21 @@ const Navigation: FC<{
     active: string;
     children: ReactNode;
 }> = ({ children, active, ...props }) => {
+
+
+    const currentChain = wagmi.useNetwork();
+    const [currentNetworkProvider, setCurrentNetworkProvider] = React.useState(
+        AVAILABLE_NETWORKS[currentChain.chain?.id == 50 ? "mainnet" : "testnet"]
+    );
+    console.log("NEWNET", currentChain.chain?.id);
+
+    useEffect(() => {
+        setCurrentNetworkProvider(AVAILABLE_NETWORKS[currentChain.chain?.id === 50 ? "mainnet" : "testnet"])
+        console.log("NEWNET", AVAILABLE_NETWORKS[currentChain.chain?.id === 50 ? "mainnet" : "testnet"])
+    }, [currentChain.chain?.id])
+
     return (
-        <>
+        <NetworkContext.Provider value={currentNetworkProvider}>
             <Navbar style={{ backgroundColor: "#21273a" }}>
                 <Nav activeKey={active}>
                     <Nav.Item
@@ -135,12 +170,12 @@ const Navigation: FC<{
                 </Nav>
                 <Nav pullRight>
                     <Nav.Item>
-                        <ConnectedWallet />
+                        <ConnectedWallet changeNetworkCallback={setCurrentNetworkProvider} />
                     </Nav.Item>
                 </Nav>
             </Navbar>
             {children}
-        </>
+        </NetworkContext.Provider>
     );
 };
 

@@ -1,16 +1,17 @@
 import React, { Context } from "react";
 import BaseNetwork from "@/networks/base/network";
-import TronNetwork from "@/networks/implementations/tron/network";
-import EthereumNetwork from "./implementations/eth/network";
+import XDCTestnetNetwork from "./implementations/xdc-testnet/network";
+import XDCMainnetNetwork from "./implementations/xdc-mainnet/network";
 
 interface AvailableNetworks {
     [key: string]: BaseNetwork;
 }
 
 const AVAILABLE_NETWORKS: AvailableNetworks = {
-    "ethereum": new EthereumNetwork(),
+    "testnet": new XDCTestnetNetwork(),
+    "mainnet": new XDCMainnetNetwork()
 }
 
-export const NetworkContext: Context<BaseNetwork> = React.createContext(AVAILABLE_NETWORKS["ethereum"]);
+export const NetworkContext: Context<BaseNetwork> = React.createContext(AVAILABLE_NETWORKS["mainnet"]);
 
 export default AVAILABLE_NETWORKS;

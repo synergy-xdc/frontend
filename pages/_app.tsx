@@ -11,7 +11,7 @@ import { MetaMaskConnector } from "wagmi/connectors/metaMask";
 import { modalConnectors, walletConnectProvider, EthereumClient } from "@web3modal/ethereum";
 import { publicProvider } from 'wagmi/providers/public';
 import React from "react";
-import { EthereumClientContext } from "@/networks/implementations/eth/network";
+import { EthereumClientContext } from "@/networks/implementations/xdc-testnet/network";
 
 
 function MyApp({ Component, pageProps }: AppProps) {
@@ -30,6 +30,21 @@ function MyApp({ Component, pageProps }: AppProps) {
                 public: "https://erpc.apothem.network",
             },
             testnet: true
+        },
+        {
+            id: 50,
+            name: "XDC Network",
+            network: "XDC Network",
+            nativeCurrency: {
+                name: "XDC",
+                symbol: "XDC",
+                decimals: 18
+            },
+            rpcUrls: {
+                default: "https://rpc1.xinfin.network",
+                public: "https://rpc1.xinfin.network",
+            },
+            testnet: false
         }
     ];
     const { provider, webSocketProvider, chains } = wagmi.configureChains(defaultChains, [
@@ -38,7 +53,7 @@ function MyApp({ Component, pageProps }: AppProps) {
     ]);
     const wagmiClient = wagmi.createClient({
         autoConnect: true,
-        connectors: [new MetaMaskConnector({ chains })],
+        connectors: [new InjectedConnector({ chains })],
         provider,
         webSocketProvider
     });
